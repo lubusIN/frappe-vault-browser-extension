@@ -14,6 +14,7 @@ const emit = defineEmits<{
   (e: 'new-secret', initialUrl?: string, initialTitle?: string): void;
   (e: 'open-generator'): void;
   (e: 'open-settings'): void;
+  (e: 'open-about'): void;
 }>();
 
 const { getSecrets, decryptSecret, toggleBookmark } = useVaultApi();
@@ -179,6 +180,14 @@ onMounted(() => {
           label="Settings"
           tooltip="Settings"
           @click="emit('open-settings')"
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="lucide-info"
+          label="About"
+          tooltip="About"
+          @click="emit('open-about')"
         />
       </div>
     </div>

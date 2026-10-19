@@ -147,10 +147,10 @@ async function handleSubmit() {
     <!-- Top Bar (Espresso Appbar) -->
     <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
       <Button
-        icon-left="lucide-arrow-left"
-        label="Vault"
+        icon="lucide-arrow-left"
         size="sm"
         variant="ghost"
+        tooltip="Back"
         @click="emit('back')"
       />
       <h2 class="text-xs font-bold text-ink-gray-9">New Secret</h2>

@@ -7,10 +7,11 @@ import SecretsListView from '../../components/SecretsListView.vue';
 import SecretDetailView from '../../components/SecretDetailView.vue';
 import SettingsView from '../../components/SettingsView.vue';
 import NewSecretView from '../../components/NewSecretView.vue';
+import AboutView from '../../components/AboutView.vue';
 import PasswordGeneratorModal from '../../components/PasswordGeneratorModal.vue';
 import VaultIcon from '../../components/VaultIcon.vue';
 
-type Screen = 'list' | 'detail' | 'settings' | 'new-secret';
+type Screen = 'list' | 'detail' | 'settings' | 'new-secret' | 'about';
 
 const { authState, isAuthLoading, initAuth } = useVaultAuth();
 
@@ -70,6 +71,7 @@ function handleSecretDeleted(_secretName: string) {
           @new-secret="handleOpenNewSecret"
           @open-generator="showGeneratorModal = true"
           @open-settings="currentScreen = 'settings'"
+          @open-about="currentScreen = 'about'"
         />
 
         <!-- Detail View -->
@@ -96,6 +98,13 @@ function handleSecretDeleted(_secretName: string) {
           :initial-title="newSecretInitialTitle"
           @back="currentScreen = 'list'"
           @created="handleSecretCreated"
+        />
+
+        <!-- About View (Top Level Screen) -->
+        <AboutView
+          v-else-if="currentScreen === 'about'"
+          key="about"
+          @back="currentScreen = 'list'"
         />
       </Transition>
 

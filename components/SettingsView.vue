@@ -3,7 +3,6 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useVaultAuth } from '../composables/useVaultAuth';
 import { openExternalUrl } from '../utils/helpers';
 import { getStoredSettings, setStoredSettings } from '../utils/storage';
-import VaultIcon from './VaultIcon.vue';
 import { Button, Badge, Switch, Dialog, Icon } from 'frappe-ui';
 
 const emit = defineEmits<{
@@ -30,10 +29,6 @@ const isLoggingOut = ref(false);
 
 function handleOpenVaultWeb() {
   openExternalUrl(vaultWebUrl.value);
-}
-
-function handleOpenGithub() {
-  openExternalUrl('https://github.com/lubusIN/frappe-vault');
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -85,10 +80,10 @@ async function handleConfirmLogout() {
     <!-- Top Bar (Espresso Appbar) -->
     <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
       <Button
-        icon-left="lucide-arrow-left"
-        label="Vault"
+        icon="lucide-arrow-left"
         size="sm"
         variant="ghost"
+        tooltip="Back"
         @click="emit('back')"
       />
       <h2 class="text-xs font-bold text-ink-gray-9">Settings</h2>
@@ -140,14 +135,23 @@ async function handleConfirmLogout() {
           </div>
         </div>
 
-        <div class="pt-2 border-t border-outline-gray-1">
+        <div class="pt-2 border-t border-outline-gray-1 space-y-2">
           <Button
             icon-right="lucide-external-link"
-            label="Open Frappe Vault Web App"
+            label="Open Vault"
             size="sm"
             variant="subtle"
             class="w-full justify-center"
             @click="handleOpenVaultWeb"
+          />
+          <Button
+            icon-left="lucide-log-out"
+            label="Signout"
+            size="sm"
+            variant="subtle"
+            theme="red"
+            class="w-full justify-center"
+            @click="showSignOutConfirm = true"
           />
         </div>
       </div>
@@ -186,55 +190,18 @@ async function handleConfirmLogout() {
           />
         </div>
       </div>
-
-      <!-- About Frappe Vault -->
-      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2.5">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <VaultIcon size="size-4" class="rounded-xs" />
-            <h3 class="text-xs font-bold text-ink-gray-9">Frappe Vault Extension</h3>
-          </div>
-          <Badge size="sm" variant="subtle" label="v1.0.0" />
-        </div>
-        <p class="text-[11px] text-ink-gray-5 leading-relaxed">
-          Open source browser extension using Frappe UI and the Espresso design system.
-        </p>
-        <div class="flex justify-between items-center pt-2 text-[11px] text-ink-gray-7 border-t border-outline-gray-1">
-          <span>Source Code</span>
-          <Button
-            icon-left="lucide-git-branch"
-            label="GitHub"
-            size="xs"
-            variant="ghost"
-            @click="handleOpenGithub"
-          />
-        </div>
-      </div>
-
-      <!-- Disconnect / Logout Action -->
-      <div class="pt-1">
-        <Button
-          icon-left="lucide-log-out"
-          label="Disconnect / Sign Out"
-          size="md"
-          variant="subtle"
-          theme="red"
-          class="w-full justify-center"
-          @click="showSignOutConfirm = true"
-        />
-      </div>
     </div>
 
     <!-- Sign Out Confirmation Dialog using Frappe UI Dialog -->
     <Dialog
       v-model="showSignOutConfirm"
-      title="Disconnect from Vault?"
+      title="Signout from Vault?"
       message="You will be signed out of this Frappe Vault instance. You will need to sign in again to access your credentials."
       theme="red"
       size="xs"
       :actions="[
         {
-          label: 'Disconnect',
+          label: 'Signout',
           theme: 'red',
           variant: 'solid',
           loading: isLoggingOut,

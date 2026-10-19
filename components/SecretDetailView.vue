@@ -254,10 +254,10 @@ onUnmounted(() => {
     <!-- Top Action Bar -->
     <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
       <Button
+        icon="lucide-arrow-left"
         size="sm"
         variant="ghost"
-        icon-left="lucide-arrow-left"
-        label="Vault"
+        tooltip="Back"
         @click="emit('back')"
       />
 
