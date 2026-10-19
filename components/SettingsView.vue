@@ -3,13 +3,14 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useVaultAuth } from '../composables/useVaultAuth';
 import { openExternalUrl } from '../utils/helpers';
 import { getStoredSettings, setStoredSettings } from '../utils/storage';
-import { Button, Badge, Switch, Dialog, Icon } from 'frappe-ui';
+import { Button, Badge, Switch, Dialog, Icon, useColorScheme } from 'frappe-ui';
 
 const emit = defineEmits<{
   (e: 'back'): void;
 }>();
 
 const { authState, logout } = useVaultAuth();
+const { colorScheme, resolvedColorScheme, setColorScheme } = useColorScheme();
 
 const vaultWebUrl = computed(() => {
   if (!authState.value?.instanceUrl) return '#';
@@ -153,6 +154,57 @@ async function handleConfirmLogout() {
             class="w-full justify-center"
             @click="showSignOutConfirm = true"
           />
+        </div>
+      </div>
+
+      <!-- Appearance & Theme Card -->
+      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <Icon icon="lucide-palette" class="size-3.5 text-ink-gray-5" />
+            <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5">Appearance</span>
+          </div>
+          <span class="text-[11px] text-ink-gray-5 font-medium capitalize">
+            {{ colorScheme === 'system' ? `System (${resolvedColorScheme})` : colorScheme }}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1 bg-surface-gray-2 p-1 rounded-4 border border-outline-gray-1">
+          <button
+            type="button"
+            class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
+            :class="colorScheme === 'system'
+              ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
+              : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
+            @click="setColorScheme('system')"
+          >
+            <Icon icon="lucide-laptop" class="size-3.5" />
+            <span>System</span>
+          </button>
+
+          <button
+            type="button"
+            class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
+            :class="colorScheme === 'light'
+              ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
+              : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
+            @click="setColorScheme('light')"
+          >
+            <Icon icon="lucide-sun" class="size-3.5" />
+            <span>Light</span>
+          </button>
+
+          <button
+            type="button"
+            class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
+            :class="colorScheme === 'dark'
+              ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
+              : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
+            @click="setColorScheme('dark')"
+          >
+            <Icon icon="lucide-moon" class="size-3.5" />
+            <span>Dark</span>
+          </button>
         </div>
       </div>
 

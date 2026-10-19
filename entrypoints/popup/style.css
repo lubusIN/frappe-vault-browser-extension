@@ -1,6 +1,14 @@
 @import 'frappe-ui/style.css';
 
 :root {
+  color-scheme: light dark;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+html[data-theme='light'] {
   color-scheme: light;
 }
 
