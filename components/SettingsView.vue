@@ -42,12 +42,20 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+function handleSetTheme(scheme: 'system' | 'light' | 'dark') {
+  setColorScheme(scheme);
+  setStoredSettings({ theme: scheme });
+}
+
 onMounted(async () => {
   window.addEventListener('keydown', handleKeydown);
   try {
     const s = await getStoredSettings();
     settings.autoClearClipboard = s.clearClipboardAfterSeconds > 0;
     settings.autoFillCurrentTab = s.autoFillCurrentTab;
+    if (s.theme && s.theme !== colorScheme.value) {
+      setColorScheme(s.theme);
+    }
   } catch {}
 });
 
@@ -176,7 +184,7 @@ async function handleConfirmLogout() {
             :class="colorScheme === 'system'
               ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
               : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
-            @click="setColorScheme('system')"
+            @click="handleSetTheme('system')"
           >
             <Icon icon="lucide-laptop" class="size-3.5" />
             <span>System</span>
@@ -188,7 +196,7 @@ async function handleConfirmLogout() {
             :class="colorScheme === 'light'
               ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
               : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
-            @click="setColorScheme('light')"
+            @click="handleSetTheme('light')"
           >
             <Icon icon="lucide-sun" class="size-3.5" />
             <span>Light</span>
@@ -200,7 +208,7 @@ async function handleConfirmLogout() {
             :class="colorScheme === 'dark'
               ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
               : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
-            @click="setColorScheme('dark')"
+            @click="handleSetTheme('dark')"
           >
             <Icon icon="lucide-moon" class="size-3.5" />
             <span>Dark</span>
@@ -237,8 +245,8 @@ async function handleConfirmLogout() {
           <Switch
             v-model="settings.autoFillCurrentTab"
             size="sm"
-            label="Match active website"
-            description="Suggest credentials matching the active browser tab"
+            label="In-page autofill suggestions"
+            description="Show vault credential dropdown directly on website login inputs"
           />
         </div>
       </div>

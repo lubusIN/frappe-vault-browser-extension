@@ -8,11 +8,13 @@ const STORAGE_KEYS = {
 export interface ExtensionSettings {
   autoFillCurrentTab: boolean;
   clearClipboardAfterSeconds: number;
+  theme: 'system' | 'light' | 'dark';
 }
 
 const DEFAULT_SETTINGS: ExtensionSettings = {
   autoFillCurrentTab: true,
   clearClipboardAfterSeconds: 30,
+  theme: 'system',
 };
 
 export async function getStoredAuthInfo(): Promise<AuthInfo | null> {
