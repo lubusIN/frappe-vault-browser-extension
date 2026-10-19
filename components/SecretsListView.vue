@@ -7,7 +7,8 @@ import type { VaultSecretSummary } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
 import VaultIcon from './VaultIcon.vue';
 import { matchesDomain, copyText, openExternalUrl } from '../utils/helpers';
-import { Button, TextInput, Badge, Spinner, TabButtons, Icon } from 'frappe-ui';
+import { Button, TextInput, Badge, Spinner, Dropdown, Icon } from 'frappe-ui';
+import type { DropdownOptions } from 'frappe-ui';
 
 const emit = defineEmits<{
   (e: 'select', secretName: string): void;
@@ -30,12 +31,105 @@ const selectedType = ref<string>('All');
 const copiedSecretName = ref<string | null>(null);
 const autofilledSecretName = ref<string | null>(null);
 
-const secretTypes = ['All', 'Password', 'API Key', 'Note', 'Credit Card', 'Database'];
+function toggleStarredFilter() {
+  activeTabFilter.value = activeTabFilter.value === 'bookmarks' ? 'all' : 'bookmarks';
+}
 
-const viewFilterOptions = [
-  { label: 'All Items', value: 'all' },
-  { label: 'Starred', value: 'bookmarks', iconLeft: 'lucide-star' },
-];
+function clearFilters() {
+  selectedType.value = 'All';
+  activeTabFilter.value = 'all';
+  searchQuery.value = '';
+}
+
+const typeCounts = computed(() => {
+  const counts: Record<string, number> = {
+    Password: 0,
+    'API Key': 0,
+    Note: 0,
+    'Credit Card': 0,
+    Database: 0,
+  };
+  for (const s of secrets.value) {
+    if (s.secret_type && counts[s.secret_type] !== undefined) {
+      counts[s.secret_type]++;
+    }
+  }
+  return counts;
+});
+
+function getTypeIcon(type: string): string {
+  switch (type) {
+    case 'Password':
+      return 'lucide-key-round';
+    case 'API Key':
+      return 'lucide-binary';
+    case 'Note':
+      return 'lucide-sticky-note';
+    case 'Credit Card':
+      return 'lucide-credit-card';
+    case 'Database':
+      return 'lucide-database';
+    default:
+      return 'lucide-filter';
+  }
+}
+
+const typeDropdownOptions = computed<DropdownOptions>(() => [
+  {
+    group: 'Filter by Type',
+    hideLabel: false,
+    options: [
+      {
+        label: `All Types (${secrets.value.length})`,
+        icon: 'lucide-layers',
+        selected: selectedType.value === 'All',
+        onClick: () => {
+          selectedType.value = 'All';
+        },
+      },
+      {
+        label: `Passwords (${typeCounts.value['Password'] || 0})`,
+        icon: 'lucide-key-round',
+        selected: selectedType.value === 'Password',
+        onClick: () => {
+          selectedType.value = 'Password';
+        },
+      },
+      {
+        label: `API Keys (${typeCounts.value['API Key'] || 0})`,
+        icon: 'lucide-binary',
+        selected: selectedType.value === 'API Key',
+        onClick: () => {
+          selectedType.value = 'API Key';
+        },
+      },
+      {
+        label: `Notes (${typeCounts.value['Note'] || 0})`,
+        icon: 'lucide-sticky-note',
+        selected: selectedType.value === 'Note',
+        onClick: () => {
+          selectedType.value = 'Note';
+        },
+      },
+      {
+        label: `Credit Cards (${typeCounts.value['Credit Card'] || 0})`,
+        icon: 'lucide-credit-card',
+        selected: selectedType.value === 'Credit Card',
+        onClick: () => {
+          selectedType.value = 'Credit Card';
+        },
+      },
+      {
+        label: `Databases (${typeCounts.value['Database'] || 0})`,
+        icon: 'lucide-database',
+        selected: selectedType.value === 'Database',
+        onClick: () => {
+          selectedType.value = 'Database';
+        },
+      },
+    ],
+  },
+]);
 
 async function fetchVaultSecrets() {
   isLoading.value = true;
@@ -192,72 +286,84 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Search & Filter Controls -->
-    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 space-y-2 flex-shrink-0">
+    <!-- Search & Single-Row Filter Controls (Option 2) -->
+    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center gap-1.5 flex-shrink-0">
       <!-- Search Input using Frappe UI TextInput -->
-      <TextInput
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search secrets..."
+      <div class="flex-1 min-w-0">
+        <TextInput
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search secrets..."
+          size="sm"
+          variant="subtle"
+        >
+          <template #prefix>
+            <Icon icon="lucide-search" class="size-3.5 text-ink-gray-4" />
+          </template>
+          <template #suffix>
+            <Button
+              v-if="searchQuery"
+              size="xs"
+              variant="ghost"
+              icon="lucide-x"
+              label="Clear search"
+              tooltip="Clear search"
+              @click="searchQuery = ''"
+            />
+          </template>
+        </TextInput>
+      </div>
+
+      <!-- Starred Filter Toggle Button -->
+      <Button
         size="sm"
-        variant="subtle"
+        :variant="activeTabFilter === 'bookmarks' ? 'solid' : 'subtle'"
+        :tooltip="activeTabFilter === 'bookmarks' ? 'Show All Items' : 'Show Starred'"
+        @click="toggleStarredFilter"
       >
-        <template #prefix>
-          <Icon icon="lucide-search" class="size-3.5 text-ink-gray-4" />
-        </template>
-        <template #suffix>
-          <Button
-            v-if="searchQuery"
-            size="xs"
-            variant="ghost"
-            icon="lucide-x"
-            label="Clear search"
-            tooltip="Clear search"
-            @click="searchQuery = ''"
+        <template #icon>
+          <Icon
+            icon="lucide-star"
+            class="size-3.5 transition-colors"
+            :class="activeTabFilter === 'bookmarks' ? 'text-amber-400 fill-amber-400' : 'text-ink-gray-5'"
           />
         </template>
-      </TextInput>
+      </Button>
 
-      <!-- View Selector (All vs Starred) & Refresh using Frappe UI TabButtons -->
-      <div class="flex items-center justify-between gap-2 text-xs">
-        <TabButtons
-          v-model="activeTabFilter"
-          :options="viewFilterOptions"
-          variant="subtle"
-          size="sm"
-        />
+      <!-- Type Filter Dropdown -->
+      <Dropdown
+        :options="typeDropdownOptions"
+        align="end"
+      >
+        <template #default>
+          <Button
+            size="sm"
+            :variant="selectedType === 'All' ? 'subtle' : 'solid'"
+            :icon-left="selectedType === 'All' ? 'lucide-filter' : getTypeIcon(selectedType)"
+            icon-right="lucide-chevron-down"
+            :label="selectedType === 'All' ? 'Type' : selectedType"
+            tooltip="Filter by Type"
+            class="max-w-[120px]"
+          />
+        </template>
+      </Dropdown>
 
-        <!-- Refresh button -->
-        <Button
-          size="xs"
-          variant="ghost"
-          icon="lucide-refresh-cw"
-          :loading="isLoading"
-          label="Refresh Vault"
-          tooltip="Refresh Vault"
-          @click="fetchVaultSecrets"
-        />
-      </div>
-
-      <!-- Type Pill Badges (Espresso subtle buttons) -->
-      <div class="flex gap-1 overflow-x-auto pb-0.5 no-scrollbar text-xs">
-        <Button
-          v-for="st in secretTypes"
-          :key="st"
-          size="xs"
-          :variant="selectedType === st ? 'solid' : 'subtle'"
-          :label="st"
-          @click="selectedType = st"
-          class="whitespace-nowrap"
-        />
-      </div>
+      <!-- Refresh button -->
+      <Button
+        size="sm"
+        variant="subtle"
+        icon="lucide-refresh-cw"
+        :loading="isLoading"
+        tooltip="Refresh Vault"
+        @click="fetchVaultSecrets"
+      />
     </div>
 
     <!-- Scrollable Content Area -->
     <div class="flex-1 overflow-y-auto p-3 space-y-3">
       <!-- Active Tab Matching Section -->
       <div
-        v-if="activeTab?.domain && !searchQuery && activeTabFilter === 'all'"
+        v-if="activeTab?.domain && !searchQuery && activeTabFilter === 'all' && selectedType === 'All'"
         class="bg-surface-base border border-outline-gray-2 rounded-4 p-2.5 shadow-elevation-1 space-y-2"
       >
         <div class="flex items-center justify-between text-xs">
@@ -327,8 +433,20 @@ onMounted(() => {
       <!-- Main Vault Secrets List -->
       <div>
         <div class="text-[11px] font-bold text-ink-gray-5 px-1 mb-1.5 flex items-center justify-between">
-          <span>{{ activeTabFilter === 'bookmarks' ? 'Starred Secrets' : 'Vault Secrets' }}</span>
-          <span>{{ filteredSecrets.length }}</span>
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="truncate">{{ activeTabFilter === 'bookmarks' ? 'Starred Secrets' : 'Vault Secrets' }}</span>
+            <span v-if="selectedType !== 'All'" class="text-ink-gray-4">•</span>
+            <span v-if="selectedType !== 'All'" class="text-ink-gray-7 truncate">{{ selectedType }}</span>
+            <Button
+              v-if="selectedType !== 'All' || activeTabFilter === 'bookmarks'"
+              size="xs"
+              variant="ghost"
+              label="Reset"
+              class="text-[10px] h-4 px-1 text-ink-gray-5 hover:text-ink-gray-9 flex-shrink-0"
+              @click="clearFilters"
+            />
+          </div>
+          <span class="flex-shrink-0">{{ filteredSecrets.length }}</span>
         </div>
 
         <!-- Loading State -->
@@ -343,13 +461,13 @@ onMounted(() => {
             <Icon :icon="searchQuery ? 'lucide-search' : activeTabFilter === 'bookmarks' ? 'lucide-star' : 'lucide-lock'" class="size-4" />
           </div>
           <p class="text-xs text-ink-gray-8 font-semibold mb-1">
-            {{ searchQuery ? 'No matching secrets' : activeTabFilter === 'bookmarks' ? 'No starred secrets' : 'Vault is empty' }}
+            {{ searchQuery ? 'No matching secrets' : activeTabFilter === 'bookmarks' ? 'No starred secrets' : selectedType !== 'All' ? `No ${selectedType} secrets` : 'Vault is empty' }}
           </p>
           <p class="text-[11px] text-ink-gray-5 mb-3.5 max-w-[240px]">
-            {{ searchQuery ? 'Try adjusting your search terms or clear the filter' : activeTabFilter === 'bookmarks' ? 'Star your frequently used credentials for quick access' : 'Add your first password or credential to get started' }}
+            {{ searchQuery ? 'Try adjusting your search terms or clear the filter' : activeTabFilter === 'bookmarks' ? 'Star your frequently used credentials for quick access' : selectedType !== 'All' ? `No secrets found matching type "${selectedType}"` : 'Add your first password or credential to get started' }}
           </p>
           <Button
-            v-if="!searchQuery && activeTabFilter === 'all'"
+            v-if="!searchQuery && activeTabFilter === 'all' && selectedType === 'All'"
             size="sm"
             variant="solid"
             icon-left="lucide-plus"
@@ -357,18 +475,12 @@ onMounted(() => {
             @click="emit('new-secret')"
           />
           <Button
-            v-else-if="searchQuery"
+            v-else
             size="xs"
             variant="subtle"
-            label="Clear search"
-            @click="searchQuery = ''"
-          />
-          <Button
-            v-else-if="activeTabFilter === 'bookmarks'"
-            size="xs"
-            variant="subtle"
-            label="Show all items"
-            @click="activeTabFilter = 'all'"
+            label="Reset filters"
+            icon-left="lucide-rotate-ccw"
+            @click="clearFilters"
           />
         </div>
 
