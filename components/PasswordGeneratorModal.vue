@@ -8,7 +8,7 @@ const emit = defineEmits<{
   (e: 'select', password: string): void;
 }>();
 
-const props = defineProps<{
+defineProps<{
   forSelection?: boolean;
 }>();
 
@@ -78,7 +78,9 @@ onUnmounted(() => {
     class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
     @click.self="emit('close')"
   >
-    <div class="bg-surface-base rounded-6 shadow-elevation-3 border border-outline-gray-2 w-full max-w-xs overflow-hidden flex flex-col">
+    <div
+      class="bg-surface-base rounded-6 shadow-elevation-3 border border-outline-gray-2 w-full max-w-xs overflow-hidden flex flex-col"
+    >
       <!-- Header (Espresso Appbar) -->
       <div class="px-4 py-3 border-b border-outline-gray-2 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -97,7 +99,9 @@ onUnmounted(() => {
 
       <!-- Generated Password Box (Espresso elevation-1) -->
       <div class="p-4 space-y-4">
-        <div class="relative bg-surface-gray-2 border border-outline-gray-2 rounded-4 p-3 flex items-center justify-between">
+        <div
+          class="relative bg-surface-gray-2 border border-outline-gray-2 rounded-4 p-3 flex items-center justify-between"
+        >
           <div class="font-mono text-xs font-semibold text-ink-gray-9 break-all select-all pr-2">
             {{ generatedPassword }}
           </div>
@@ -133,37 +137,15 @@ onUnmounted(() => {
               :label="options.length >= 16 ? 'Strong' : options.length >= 12 ? 'Good' : 'Fair'"
             />
           </div>
-          <Slider
-            v-model="lengthModel"
-            :min="8"
-            :max="40"
-            :step="1"
-            size="sm"
-          />
+          <Slider v-model="lengthModel" :min="8" :max="40" :step="1" size="sm" />
         </div>
 
         <!-- Options checkboxes in a 2-column grid -->
         <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 pt-2 border-t border-outline-gray-1 text-xs">
-          <Checkbox
-            v-model="options.uppercase"
-            label="Uppercase (A-Z)"
-            size="sm"
-          />
-          <Checkbox
-            v-model="options.lowercase"
-            label="Lowercase (a-z)"
-            size="sm"
-          />
-          <Checkbox
-            v-model="options.numbers"
-            label="Numbers (0-9)"
-            size="sm"
-          />
-          <Checkbox
-            v-model="options.symbols"
-            label="Symbols (!@#$...)"
-            size="sm"
-          />
+          <Checkbox v-model="options.uppercase" label="Uppercase (A-Z)" size="sm" />
+          <Checkbox v-model="options.lowercase" label="Lowercase (a-z)" size="sm" />
+          <Checkbox v-model="options.numbers" label="Numbers (0-9)" size="sm" />
+          <Checkbox v-model="options.symbols" label="Symbols (!@#$...)" size="sm" />
         </div>
 
         <!-- Actions using Frappe UI Button defaults -->

@@ -439,12 +439,23 @@ export default defineContentScript({
       const input = el as HTMLInputElement;
 
       if (input.disabled || input.readOnly) return false;
-      if (input.offsetParent === null && input.offsetWidth === 0 && input.offsetHeight === 0) return false;
+      if (input.offsetParent === null && input.offsetWidth === 0 && input.offsetHeight === 0)
+        return false;
 
       const type = (input.type || 'text').toLowerCase();
       const nonEligibleTypes = [
-        'hidden', 'submit', 'button', 'reset', 'checkbox',
-        'radio', 'file', 'image', 'color', 'range', 'date', 'number'
+        'hidden',
+        'submit',
+        'button',
+        'reset',
+        'checkbox',
+        'radio',
+        'file',
+        'image',
+        'color',
+        'range',
+        'date',
+        'number',
       ];
       if (nonEligibleTypes.includes(type)) return false;
 
@@ -459,12 +470,33 @@ export default defineContentScript({
       if (type === 'password') return true;
 
       // Autocomplete username/email
-      if (['username', 'email', 'current-password', 'new-password'].includes(autocomplete)) return true;
+      if (['username', 'email', 'current-password', 'new-password'].includes(autocomplete))
+        return true;
 
       // Common login field names
-      if (name.includes('user') || name.includes('login') || name.includes('email') || name.includes('auth') || name.includes('pass')) return true;
-      if (id.includes('user') || id.includes('login') || id.includes('email') || id.includes('auth') || id.includes('pass')) return true;
-      if (placeholder.includes('email') || placeholder.includes('username') || placeholder.includes('user') || placeholder.includes('login')) return true;
+      if (
+        name.includes('user') ||
+        name.includes('login') ||
+        name.includes('email') ||
+        name.includes('auth') ||
+        name.includes('pass')
+      )
+        return true;
+      if (
+        id.includes('user') ||
+        id.includes('login') ||
+        id.includes('email') ||
+        id.includes('auth') ||
+        id.includes('pass')
+      )
+        return true;
+      if (
+        placeholder.includes('email') ||
+        placeholder.includes('username') ||
+        placeholder.includes('user') ||
+        placeholder.includes('login')
+      )
+        return true;
 
       // Form heuristic
       const form = input.form || input.closest('form');
@@ -509,7 +541,12 @@ export default defineContentScript({
      */
     function updateIconPosition(icon: HTMLElement, input: HTMLInputElement) {
       const rect = input.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > window.innerHeight) {
+      if (
+        rect.width === 0 ||
+        rect.height === 0 ||
+        rect.bottom < 0 ||
+        rect.top > window.innerHeight
+      ) {
         icon.style.display = 'none';
         return;
       }
@@ -762,7 +799,11 @@ export default defineContentScript({
     /**
      * Populate credentials into input fields and fire change events
      */
-    function performAutofill(username?: string, password?: string, targetInput?: HTMLInputElement | null): boolean {
+    function performAutofill(
+      username?: string,
+      password?: string,
+      targetInput?: HTMLInputElement | null
+    ): boolean {
       try {
         let filledAny = false;
 
@@ -773,7 +814,7 @@ export default defineContentScript({
         } else {
           const passwordInputs = Array.from(
             document.querySelectorAll<HTMLInputElement>('input[type="password"]')
-          ).filter(el => el.offsetParent !== null && !el.disabled && !el.readOnly);
+          ).filter((el) => el.offsetParent !== null && !el.disabled && !el.readOnly);
           passwordInput = passwordInputs[0] || null;
         }
 
@@ -821,7 +862,10 @@ export default defineContentScript({
 
       const candidates = Array.from(
         (form || document).querySelectorAll<HTMLInputElement>(selector)
-      ).filter(el => el.offsetParent !== null && el.type !== 'password' && el.type !== 'hidden' && !el.disabled);
+      ).filter(
+        (el) =>
+          el.offsetParent !== null && el.type !== 'password' && el.type !== 'hidden' && !el.disabled
+      );
 
       return candidates[0] || null;
     }
@@ -856,30 +900,38 @@ export default defineContentScript({
     document.addEventListener('mouseenter', handleInputInteraction, true);
 
     // Dismiss dropdown on outside clicks
-    document.addEventListener('pointerdown', (e) => {
-      const path = e.composedPath();
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        const path = e.composedPath();
 
-      // Click inside shadow host (icon or dropdown)
-      if (shadowHost && path.includes(shadowHost)) {
-        return;
-      }
+        // Click inside shadow host (icon or dropdown)
+        if (shadowHost && path.includes(shadowHost)) {
+          return;
+        }
 
-      // Click inside the active input
-      if (activeInput && path.includes(activeInput)) {
-        return;
-      }
+        // Click inside the active input
+        if (activeInput && path.includes(activeInput)) {
+          return;
+        }
 
-      if (isDropdownVisible) {
-        hideAutofillDropdown();
-      }
-    }, true);
+        if (isDropdownVisible) {
+          hideAutofillDropdown();
+        }
+      },
+      true
+    );
 
     // Dismiss on Escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isDropdownVisible) {
-        hideAutofillDropdown();
-      }
-    }, true);
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && isDropdownVisible) {
+          hideAutofillDropdown();
+        }
+      },
+      true
+    );
 
     // Keep in-field icon and dropdown positioned on scroll / resize
     function handleViewChange() {

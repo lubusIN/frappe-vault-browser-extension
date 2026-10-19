@@ -69,15 +69,17 @@ export function useVaultApi() {
     return (resJson.message !== undefined ? resJson.message : resJson) as T;
   }
 
-  async function getSecrets(params: {
-    search?: string;
-    secret_type?: string;
-    folder?: string;
-    bookmarks_only?: boolean;
-    limit?: number;
-    offset?: number;
-    order_by?: string;
-  } = {}): Promise<{ secrets: VaultSecretSummary[]; total: number }> {
+  async function getSecrets(
+    params: {
+      search?: string;
+      secret_type?: string;
+      folder?: string;
+      bookmarks_only?: boolean;
+      limit?: number;
+      offset?: number;
+      order_by?: string;
+    } = {}
+  ): Promise<{ secrets: VaultSecretSummary[]; total: number }> {
     const res = await makeRequest<{ secrets: VaultSecretSummary[]; total: number }>(
       'frappe_vault.api.secrets.list',
       {
@@ -147,7 +149,10 @@ export function useVaultApi() {
     });
   }
 
-  async function updateSecret(name: string, data: Record<string, any>): Promise<{ name: string; title: string }> {
+  async function updateSecret(
+    name: string,
+    data: Record<string, any>
+  ): Promise<{ name: string; title: string }> {
     return await makeRequest<{ name: string; title: string }>('frappe_vault.api.secrets.update', {
       method: 'POST',
       body: { name, ...data },
@@ -162,10 +167,13 @@ export function useVaultApi() {
   }
 
   async function toggleBookmark(name: string): Promise<{ name: string; is_bookmark: number }> {
-    return await makeRequest<{ name: string; is_bookmark: number }>('frappe_vault.api.secrets.toggle_bookmark', {
-      method: 'POST',
-      body: { name },
-    });
+    return await makeRequest<{ name: string; is_bookmark: number }>(
+      'frappe_vault.api.secrets.toggle_bookmark',
+      {
+        method: 'POST',
+        body: { name },
+      }
+    );
   }
 
   async function getFolders(): Promise<VaultFolder[]> {

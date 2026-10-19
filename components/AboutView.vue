@@ -11,7 +11,11 @@ const emit = defineEmits<{
 
 const extensionVersion = computed(() => {
   const g = globalThis as any;
-  return g.browser?.runtime?.getManifest?.()?.version || g.chrome?.runtime?.getManifest?.()?.version || '1.0.0';
+  return (
+    g.browser?.runtime?.getManifest?.()?.version ||
+    g.chrome?.runtime?.getManifest?.()?.version ||
+    '1.0.0'
+  );
 });
 
 function handleOpenVaultApp() {
@@ -48,7 +52,9 @@ onUnmounted(() => {
 <template>
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
     <!-- Top Bar (Espresso Appbar) -->
-    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
+    <div
+      class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0"
+    >
       <Button
         icon="lucide-arrow-left"
         size="sm"
@@ -63,7 +69,9 @@ onUnmounted(() => {
     <!-- Body (Espresso cards) -->
     <div class="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs">
       <!-- App Identity Hero Card -->
-      <div class="bg-surface-base p-4 rounded-6 border border-outline-gray-2 shadow-elevation-1 flex flex-col items-center text-center space-y-2">
+      <div
+        class="bg-surface-base p-4 rounded-6 border border-outline-gray-2 shadow-elevation-1 flex flex-col items-center text-center space-y-2"
+      >
         <VaultIcon size="size-12" class="rounded-4 shadow-elevation-2" />
         <div class="space-y-0.5">
           <h1 class="text-sm font-bold text-ink-gray-9 tracking-tight">Frappe Vault</h1>
@@ -76,7 +84,9 @@ onUnmounted(() => {
       </div>
 
       <!-- Navigation & Links Card -->
-      <div class="bg-surface-base rounded-6 border border-outline-gray-2 shadow-elevation-1 divide-y divide-outline-gray-1 overflow-hidden">
+      <div
+        class="bg-surface-base rounded-6 border border-outline-gray-2 shadow-elevation-1 divide-y divide-outline-gray-1 overflow-hidden"
+      >
         <!-- Main Frappe Vault App Repo -->
         <button
           type="button"
@@ -103,7 +113,9 @@ onUnmounted(() => {
             <GithubIcon class="size-4 text-ink-gray-7" />
             <div>
               <div class="font-medium text-ink-gray-9">Vault Browser Extension</div>
-              <div class="text-[10px] text-ink-gray-5">github.com/lubusIN/vault-browser-extention</div>
+              <div class="text-[10px] text-ink-gray-5">
+                github.com/lubusIN/vault-browser-extention
+              </div>
             </div>
           </div>
           <Icon icon="lucide-external-link" class="size-3.5 text-ink-gray-4" />
@@ -127,7 +139,9 @@ onUnmounted(() => {
       </div>
 
       <!-- Legal & Credit Info -->
-      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2 text-[11px] text-ink-gray-5">
+      <div
+        class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2 text-[11px] text-ink-gray-5"
+      >
         <div class="flex justify-between items-center">
           <span>License</span>
           <span class="font-medium text-ink-gray-7">Open Source (MIT)</span>

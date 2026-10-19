@@ -107,7 +107,9 @@ async function ensureDecrypted(): Promise<boolean> {
   return false;
 }
 
-async function toggleReveal(field: 'password' | 'apiSecret' | 'cardNumber' | 'cardCvv' | 'dbPassword' | 'sshKey') {
+async function toggleReveal(
+  field: 'password' | 'apiSecret' | 'cardNumber' | 'cardCvv' | 'dbPassword' | 'sshKey'
+) {
   const map = {
     password: showPassword,
     apiSecret: showApiSecret,
@@ -141,7 +143,8 @@ async function handleCopy(fieldKey: string, immediateText?: string | null) {
     else if (fieldKey === 'card_number') text = d?.card_number;
     else if (fieldKey === 'card_cvv') text = d?.card_cvv;
     else if (fieldKey === 'db_password') text = d?.db_password;
-    else if (fieldKey === 'ssh_private_key') text = d?.ssh_private_key || secret.value?.ssh_private_key;
+    else if (fieldKey === 'ssh_private_key')
+      text = d?.ssh_private_key || secret.value?.ssh_private_key;
     else if (fieldKey === 'totp') text = totpData.value?.code;
   }
 
@@ -166,7 +169,10 @@ async function handleAutofill() {
     pwd = secret.value?.decrypted?.password;
   }
 
-  const ok = await autofillCredentials(secret.value?.username || secret.value?.email || '', pwd || '');
+  const ok = await autofillCredentials(
+    secret.value?.username || secret.value?.email || '',
+    pwd || ''
+  );
   autofillStatus.value = ok ? 'success' : 'failed';
   setTimeout(() => {
     autofillStatus.value = 'idle';
@@ -263,7 +269,9 @@ onUnmounted(() => {
 <template>
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
     <!-- Top Action Bar -->
-    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
+    <div
+      class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0"
+    >
       <Button
         icon="lucide-arrow-left"
         size="sm"
@@ -303,7 +311,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Loading State using Frappe UI Spinner -->
-    <div v-if="isLoading" class="flex-1 flex items-center justify-center p-6 text-ink-gray-5 text-xs">
+    <div
+      v-if="isLoading"
+      class="flex-1 flex items-center justify-center p-6 text-ink-gray-5 text-xs"
+    >
       <div class="flex flex-col items-center gap-2">
         <Spinner size="md" />
         <span>Loading secret...</span>
@@ -312,27 +323,25 @@ onUnmounted(() => {
 
     <!-- Error State -->
     <div v-else-if="error" class="flex-1 p-6 text-center">
-      <div class="p-3 rounded-4 bg-surface-base border border-outline-gray-3 text-ink-red-3 text-xs mb-3">
+      <div
+        class="p-3 rounded-4 bg-surface-base border border-outline-gray-3 text-ink-red-3 text-xs mb-3"
+      >
         {{ error }}
       </div>
-      <Button size="sm" variant="subtle" @click="loadSecret">
-        Try again
-      </Button>
+      <Button size="sm" variant="subtle" @click="loadSecret"> Try again </Button>
     </div>
 
     <!-- Secret Details Body -->
     <div v-else-if="secret" class="flex-1 p-3.5 overflow-y-auto space-y-3">
       <!-- Title & Badges Header Card -->
-      <div class="flex items-center gap-3 bg-surface-base p-3 rounded-6 border border-outline-gray-2 shadow-elevation-1">
+      <div
+        class="flex items-center gap-3 bg-surface-base p-3 rounded-6 border border-outline-gray-2 shadow-elevation-1"
+      >
         <SecretTypeIcon :type="secret.secret_type" size="md" />
         <div class="flex-1 min-w-0">
           <h1 class="text-sm font-bold text-ink-gray-9 truncate">{{ secret.title }}</h1>
           <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-            <Badge
-              size="sm"
-              variant="subtle"
-              :label="secret.secret_type"
-            />
+            <Badge size="sm" variant="subtle" :label="secret.secret_type" />
             <Badge
               v-if="secret.folder_name"
               size="sm"
@@ -355,7 +364,13 @@ onUnmounted(() => {
             variant="solid"
             class="flex-1 justify-center"
             :icon-left="autofillStatus === 'success' ? 'lucide-check' : 'lucide-zap'"
-            :label="autofillStatus === 'success' ? 'Filled!' : autofillStatus === 'failed' ? 'Not found' : 'Autofill'"
+            :label="
+              autofillStatus === 'success'
+                ? 'Filled!'
+                : autofillStatus === 'failed'
+                  ? 'Not found'
+                  : 'Autofill'
+            "
             @click="handleAutofill"
           />
 
@@ -393,7 +408,11 @@ onUnmounted(() => {
           />
 
           <Button
-            v-if="secret.secret_type === 'API Key' || secret.has_api_secret || secret.decrypted?.api_secret"
+            v-if="
+              secret.secret_type === 'API Key' ||
+              secret.has_api_secret ||
+              secret.decrypted?.api_secret
+            "
             size="sm"
             variant="solid"
             class="flex-1 justify-center"
@@ -406,7 +425,11 @@ onUnmounted(() => {
         <!-- Credit Card Quick Actions -->
         <template v-else-if="secret.secret_type === 'Credit Card'">
           <Button
-            v-if="secret.secret_type === 'Credit Card' || secret.has_card_number || secret.decrypted?.card_number"
+            v-if="
+              secret.secret_type === 'Credit Card' ||
+              secret.has_card_number ||
+              secret.decrypted?.card_number
+            "
             size="sm"
             variant="solid"
             class="flex-1 justify-center"
@@ -416,7 +439,11 @@ onUnmounted(() => {
           />
 
           <Button
-            v-if="secret.secret_type === 'Credit Card' || secret.has_card_cvv || secret.decrypted?.card_cvv"
+            v-if="
+              secret.secret_type === 'Credit Card' ||
+              secret.has_card_cvv ||
+              secret.decrypted?.card_cvv
+            "
             size="sm"
             variant="subtle"
             class="flex-1 justify-center"
@@ -435,11 +462,20 @@ onUnmounted(() => {
             class="flex-1 justify-center"
             :icon-left="copiedField === 'db_host' ? 'lucide-check' : 'lucide-copy'"
             :label="copiedField === 'db_host' ? 'Copied!' : 'Copy Host'"
-            @click="handleCopy('db_host', `${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`)"
+            @click="
+              handleCopy(
+                'db_host',
+                `${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`
+              )
+            "
           />
 
           <Button
-            v-if="secret.secret_type === 'Database' || secret.has_db_password || secret.decrypted?.db_password"
+            v-if="
+              secret.secret_type === 'Database' ||
+              secret.has_db_password ||
+              secret.decrypted?.db_password
+            "
             size="sm"
             variant="solid"
             class="flex-1 justify-center"
@@ -519,7 +555,9 @@ onUnmounted(() => {
       </div>
 
       <!-- Credential Fields List (Modular SecretFieldRows) -->
-      <div class="bg-surface-base rounded-6 border border-outline-gray-2 divide-y divide-outline-gray-1 overflow-hidden shadow-elevation-1">
+      <div
+        class="bg-surface-base rounded-6 border border-outline-gray-2 divide-y divide-outline-gray-1 overflow-hidden shadow-elevation-1"
+      >
         <!-- URL -->
         <SecretFieldRow
           v-if="secret.url"
@@ -554,7 +592,11 @@ onUnmounted(() => {
           :loading="isDecrypting"
           is-mono
           :badge-label="secret.password_strength || undefined"
-          :badge-theme="secret.password_strength === 'strong' || secret.password_strength === 'excellent' ? 'green' : 'amber'"
+          :badge-theme="
+            secret.password_strength === 'strong' || secret.password_strength === 'excellent'
+              ? 'green'
+              : 'amber'
+          "
           :is-copied="copiedField === 'password'"
           @toggle-reveal="toggleReveal('password')"
           @copy="handleCopy('password')"
@@ -572,7 +614,11 @@ onUnmounted(() => {
             @copy="handleCopy('api_key', secret.api_key)"
           />
           <SecretFieldRow
-            v-if="secret.secret_type === 'API Key' || secret.has_api_secret || secret.decrypted?.api_secret"
+            v-if="
+              secret.secret_type === 'API Key' ||
+              secret.has_api_secret ||
+              secret.decrypted?.api_secret
+            "
             label="API Secret"
             :value="secret.decrypted?.api_secret"
             icon="lucide-key-round"
@@ -598,7 +644,11 @@ onUnmounted(() => {
             @copy="handleCopy('card_holder', secret.card_holder)"
           />
           <SecretFieldRow
-            v-if="secret.secret_type === 'Credit Card' || secret.has_card_number || secret.decrypted?.card_number"
+            v-if="
+              secret.secret_type === 'Credit Card' ||
+              secret.has_card_number ||
+              secret.decrypted?.card_number
+            "
             label="Card Number"
             :value="secret.decrypted?.card_number"
             icon="lucide-credit-card"
@@ -619,7 +669,11 @@ onUnmounted(() => {
             @copy="handleCopy('card_expiry', secret.card_expiry)"
           />
           <SecretFieldRow
-            v-if="secret.secret_type === 'Credit Card' || secret.has_card_cvv || secret.decrypted?.card_cvv"
+            v-if="
+              secret.secret_type === 'Credit Card' ||
+              secret.has_card_cvv ||
+              secret.decrypted?.card_cvv
+            "
             label="CVV"
             :value="secret.decrypted?.card_cvv"
             icon="lucide-key-round"
@@ -643,7 +697,12 @@ onUnmounted(() => {
             icon="lucide-database"
             is-mono
             :is-copied="copiedField === 'db_host'"
-            @copy="handleCopy('db_host', `${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`)"
+            @copy="
+              handleCopy(
+                'db_host',
+                `${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`
+              )
+            "
           />
           <SecretFieldRow
             v-if="secret.db_name"
@@ -663,7 +722,11 @@ onUnmounted(() => {
             @copy="handleCopy('username', secret.username)"
           />
           <SecretFieldRow
-            v-if="secret.secret_type === 'Database' || secret.has_db_password || secret.decrypted?.db_password"
+            v-if="
+              secret.secret_type === 'Database' ||
+              secret.has_db_password ||
+              secret.decrypted?.db_password
+            "
             label="Database Password"
             :value="secret.decrypted?.db_password"
             icon="lucide-key-round"
@@ -684,10 +747,17 @@ onUnmounted(() => {
             <div class="flex items-center justify-between mb-1.5">
               <div class="flex items-center gap-1.5">
                 <Icon icon="lucide-terminal" class="size-3.5 text-ink-gray-4" />
-                <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider">SSH Private Key</span>
+                <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider"
+                  >SSH Private Key</span
+                >
               </div>
               <div class="flex items-center gap-1">
-                <Button size="xs" variant="ghost" :label="showSshKey ? 'Hide' : 'Reveal'" @click="toggleReveal('sshKey')" />
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  :label="showSshKey ? 'Hide' : 'Reveal'"
+                  @click="toggleReveal('sshKey')"
+                />
                 <Button
                   size="xs"
                   :variant="copiedField === 'ssh_private_key' ? 'solid' : 'ghost'"
@@ -699,8 +769,12 @@ onUnmounted(() => {
                 />
               </div>
             </div>
-            <div class="bg-surface-gray-2 p-2 rounded-3 border border-outline-gray-1 font-mono text-[11px] text-ink-gray-9 max-h-24 overflow-y-auto whitespace-pre select-all">
-              <span v-if="showSshKey">{{ secret.decrypted?.ssh_private_key || secret.ssh_private_key || 'No key content' }}</span>
+            <div
+              class="bg-surface-gray-2 p-2 rounded-3 border border-outline-gray-1 font-mono text-[11px] text-ink-gray-9 max-h-24 overflow-y-auto whitespace-pre select-all"
+            >
+              <span v-if="showSshKey">{{
+                secret.decrypted?.ssh_private_key || secret.ssh_private_key || 'No key content'
+              }}</span>
               <span v-else class="text-ink-gray-4 italic">•••••••••••• (hidden)</span>
             </div>
           </div>
@@ -711,7 +785,9 @@ onUnmounted(() => {
           <div class="flex items-center justify-between mb-1">
             <div class="flex items-center gap-1.5">
               <Icon icon="lucide-file-text" class="size-3.5 text-ink-gray-4" />
-              <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider">Notes</span>
+              <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider"
+                >Notes</span
+              >
             </div>
             <Button
               size="xs"
@@ -723,7 +799,9 @@ onUnmounted(() => {
               @click="handleCopy('notes', secret.notes)"
             />
           </div>
-          <div class="text-ink-gray-8 whitespace-pre-wrap text-xs bg-surface-gray-2 p-2 rounded-3 border border-outline-gray-1 max-h-32 overflow-y-auto select-all">
+          <div
+            class="text-ink-gray-8 whitespace-pre-wrap text-xs bg-surface-gray-2 p-2 rounded-3 border border-outline-gray-1 max-h-32 overflow-y-auto select-all"
+          >
             {{ secret.notes }}
           </div>
         </div>
@@ -737,7 +815,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Pinned Footer: Edit in Full Tab -->
-    <div v-if="secret" class="px-3.5 py-2.5 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between text-xs flex-shrink-0">
+    <div
+      v-if="secret"
+      class="px-3.5 py-2.5 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between text-xs flex-shrink-0"
+    >
       <div class="flex items-center gap-1.5 text-[11px] text-ink-gray-5">
         <span>Updated {{ formatRelativeTime(secret?.modified) }}</span>
       </div>

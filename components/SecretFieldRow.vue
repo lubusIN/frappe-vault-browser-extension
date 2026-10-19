@@ -7,7 +7,7 @@ const emit = defineEmits<{
   (e: 'toggle-reveal'): void;
 }>();
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     label: string;
     value?: string | number | null;
@@ -39,13 +39,11 @@ const props = withDefaults(
 </script>
 
 <template>
-  <div class="p-2.5 flex items-center justify-between text-xs hover:bg-surface-gray-1 transition group">
+  <div
+    class="p-2.5 flex items-center justify-between text-xs hover:bg-surface-gray-1 transition group"
+  >
     <div class="flex items-center gap-2 min-w-0 flex-1 pr-2">
-      <Icon
-        v-if="icon"
-        :icon="icon"
-        class="size-3.5 text-ink-gray-4 flex-shrink-0"
-      />
+      <Icon v-if="icon" :icon="icon" class="size-3.5 text-ink-gray-4 flex-shrink-0" />
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5">
           <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider">
@@ -81,9 +79,7 @@ const props = withDefaults(
               <span v-else-if="loading" class="text-ink-gray-4 italic text-[11px]">
                 Decrypting...
               </span>
-              <span v-else class="tracking-widest text-ink-gray-7">
-                ••••••••••••
-              </span>
+              <span v-else class="tracking-widest text-ink-gray-7"> •••••••••••• </span>
             </div>
 
             <!-- Standard text -->

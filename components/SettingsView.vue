@@ -87,7 +87,9 @@ async function handleConfirmLogout() {
 <template>
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
     <!-- Top Bar (Espresso Appbar) -->
-    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
+    <div
+      class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0"
+    >
       <Button
         icon="lucide-arrow-left"
         size="sm"
@@ -102,15 +104,14 @@ async function handleConfirmLogout() {
     <!-- Body (Espresso cards) -->
     <div class="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs">
       <!-- Connection Status Card -->
-      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-3">
+      <div
+        class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-3"
+      >
         <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5">Connected Instance</span>
-          <Badge
-            theme="green"
-            size="sm"
-            variant="subtle"
-            label="Connected"
+          <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5"
+            >Connected Instance</span
           >
+          <Badge theme="green" size="sm" variant="subtle" label="Connected">
             <template #prefix>
               <Icon icon="lucide-check-circle-2" class="size-3 text-ink-green-7" />
             </template>
@@ -127,7 +128,10 @@ async function handleConfirmLogout() {
             <Icon icon="lucide-user" class="size-4 text-ink-gray-4 flex-shrink-0" />
             <span class="text-ink-gray-7 truncate">
               {{ authState?.user }}
-              <span v-if="authState?.fullName && authState?.fullName !== authState?.user" class="text-ink-gray-4">
+              <span
+                v-if="authState?.fullName && authState?.fullName !== authState?.user"
+                class="text-ink-gray-4"
+              >
                 ({{ authState?.fullName }})
               </span>
             </span>
@@ -166,24 +170,32 @@ async function handleConfirmLogout() {
       </div>
 
       <!-- Appearance & Theme Card -->
-      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2.5">
+      <div
+        class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2.5"
+      >
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5">
             <Icon icon="lucide-palette" class="size-3.5 text-ink-gray-5" />
-            <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5">Appearance</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5"
+              >Appearance</span
+            >
           </div>
           <span class="text-[11px] text-ink-gray-5 font-medium capitalize">
             {{ colorScheme === 'system' ? `System (${resolvedColorScheme})` : colorScheme }}
           </span>
         </div>
 
-        <div class="grid grid-cols-3 gap-1 bg-surface-gray-2 p-1 rounded-4 border border-outline-gray-1">
+        <div
+          class="grid grid-cols-3 gap-1 bg-surface-gray-2 p-1 rounded-4 border border-outline-gray-1"
+        >
           <button
             type="button"
             class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
-            :class="colorScheme === 'system'
-              ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
-              : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
+            :class="
+              colorScheme === 'system'
+                ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
+                : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'
+            "
             @click="handleSetTheme('system')"
           >
             <Icon icon="lucide-laptop" class="size-3.5" />
@@ -193,9 +205,11 @@ async function handleConfirmLogout() {
           <button
             type="button"
             class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
-            :class="colorScheme === 'light'
-              ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
-              : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
+            :class="
+              colorScheme === 'light'
+                ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
+                : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'
+            "
             @click="handleSetTheme('light')"
           >
             <Icon icon="lucide-sun" class="size-3.5" />
@@ -205,9 +219,11 @@ async function handleConfirmLogout() {
           <button
             type="button"
             class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
-            :class="colorScheme === 'dark'
-              ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
-              : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'"
+            :class="
+              colorScheme === 'dark'
+                ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
+                : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'
+            "
             @click="handleSetTheme('dark')"
           >
             <Icon icon="lucide-moon" class="size-3.5" />
@@ -217,10 +233,14 @@ async function handleConfirmLogout() {
       </div>
 
       <!-- Security & Preferences (Using Frappe UI Switch) -->
-      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-3">
+      <div
+        class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-3"
+      >
         <div class="flex items-center gap-1.5">
           <Icon icon="lucide-lock" class="size-3.5 text-ink-gray-5" />
-          <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5">Security & Preferences</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5"
+            >Security & Preferences</span
+          >
         </div>
 
         <div class="space-y-3 pt-1">

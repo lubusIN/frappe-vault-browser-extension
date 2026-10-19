@@ -12,14 +12,19 @@ html[data-theme='light'] {
   color-scheme: light;
 }
 
-html, body {
+html,
+body {
   width: 380px;
   height: 560px;
   max-height: 560px;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   background-color: var(--surface-gray-2, #f9fafb);
   color: var(--ink-gray-9, #111827);

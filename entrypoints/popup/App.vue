@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { Spinner } from 'frappe-ui';
 import { useVaultAuth } from '../../composables/useVaultAuth';
 import ConnectView from '../../components/ConnectView.vue';
 import SecretsListView from '../../components/SecretsListView.vue';
@@ -50,9 +49,14 @@ function handleSecretDeleted(_secretName: string) {
 </script>
 
 <template>
-  <main class="w-[380px] h-[560px] max-h-[560px] bg-surface-gray-2 text-ink-gray-9 flex flex-col font-sans select-none overflow-hidden">
+  <main
+    class="w-[380px] h-[560px] max-h-[560px] bg-surface-gray-2 text-ink-gray-9 flex flex-col font-sans select-none overflow-hidden"
+  >
     <!-- Initial App Loading State -->
-    <div v-if="isAuthLoading && !authState" class="flex-1 flex flex-col items-center justify-center p-6 text-ink-gray-5 text-xs gap-3">
+    <div
+      v-if="isAuthLoading && !authState"
+      class="flex-1 flex flex-col items-center justify-center p-6 text-ink-gray-5 text-xs gap-3"
+    >
       <VaultIcon size="size-10" class="rounded-5 shadow-elevation-1 animate-pulse" />
       <span class="font-medium text-ink-gray-7">Connecting to Frappe Vault...</span>
     </div>
@@ -109,10 +113,7 @@ function handleSecretDeleted(_secretName: string) {
       </Transition>
 
       <!-- Password Generator Modal -->
-      <PasswordGeneratorModal
-        v-if="showGeneratorModal"
-        @close="showGeneratorModal = false"
-      />
+      <PasswordGeneratorModal v-if="showGeneratorModal" @close="showGeneratorModal = false" />
     </template>
   </main>
 </template>

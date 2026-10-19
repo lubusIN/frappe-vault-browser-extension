@@ -13,9 +13,5 @@
     "./types/**/*",
     "./.wxt/wxt.d.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    ".output"
-  ]
+  "exclude": ["node_modules", "dist", ".output"]
 }

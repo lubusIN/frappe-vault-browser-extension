@@ -1,12 +1,5 @@
 export type SecretType =
-  | 'Password'
-  | 'API Key'
-  | 'Note'
-  | 'SSH Key'
-  | 'Media'
-  | 'Credit Card'
-  | 'Database'
-  | 'Other';
+  'Password' | 'API Key' | 'Note' | 'SSH Key' | 'Media' | 'Credit Card' | 'Database' | 'Other';
 
 export interface VaultSecretSummary {
   name: string;

@@ -175,7 +175,7 @@ async function handleLoadMore() {
       order_by: 'modified desc',
     });
     const newItems = res.secrets || [];
-    const existingNames = new Set(secrets.value.map(s => s.name));
+    const existingNames = new Set(secrets.value.map((s) => s.name));
     for (const item of newItems) {
       if (!existingNames.has(item.name)) {
         secrets.value.push(item);
@@ -224,15 +224,13 @@ watch(searchQuery, (newVal) => {
 // Matching secrets for the active tab domain
 const matchingSecrets = computed(() => {
   if (!activeTab.value?.domain) return [];
-  return secrets.value.filter(s =>
-    matchesDomain(s.url, s.title, activeTab.value?.domain)
-  );
+  return secrets.value.filter((s) => matchesDomain(s.url, s.title, activeTab.value?.domain));
 });
 
 // Filtered secrets list (supports both server search results and local filtering)
 const filteredSecrets = computed(() => {
   const source = serverSearchResults.value !== null ? serverSearchResults.value : secrets.value;
-  return source.filter(s => {
+  return source.filter((s) => {
     // Bookmark filter
     if (activeTabFilter.value === 'bookmarks' && !s.is_bookmark) {
       return false;
@@ -260,7 +258,13 @@ async function handleQuickCopyPassword(secret: VaultSecretSummary, event: Event)
   event.stopPropagation();
   try {
     const full = await decryptSecret(secret.name);
-    const pwd = full.decrypted?.password || (full as any).password || full.decrypted?.api_secret || (full as any).api_secret || full.decrypted?.card_number || (full as any).card_number;
+    const pwd =
+      full.decrypted?.password ||
+      (full as any).password ||
+      full.decrypted?.api_secret ||
+      (full as any).api_secret ||
+      full.decrypted?.card_number ||
+      (full as any).card_number;
     if (pwd) {
       await copyText(pwd, 30);
       copiedSecretName.value = secret.name;
@@ -320,7 +324,9 @@ onMounted(() => {
 <template>
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
     <!-- Top Action Header (Espresso Appbar) -->
-    <div class="px-3.5 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
+    <div
+      class="px-3.5 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0"
+    >
       <div class="flex items-center gap-2">
         <VaultIcon size="size-5" class="rounded-md shadow-2xs" />
         <span class="text-xs font-bold tracking-tight text-ink-gray-9">Frappe Vault</span>
@@ -363,7 +369,9 @@ onMounted(() => {
     </div>
 
     <!-- Search & Single-Row Filter Controls (Option 2) -->
-    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center gap-1.5 flex-shrink-0">
+    <div
+      class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center gap-1.5 flex-shrink-0"
+    >
       <!-- Search Input using Frappe UI TextInput -->
       <div class="flex-1 min-w-0">
         <TextInput
@@ -402,16 +410,15 @@ onMounted(() => {
           <Icon
             icon="lucide-star"
             class="size-3.5 transition-colors"
-            :class="activeTabFilter === 'bookmarks' ? 'text-amber-400 fill-amber-400' : 'text-ink-gray-5'"
+            :class="
+              activeTabFilter === 'bookmarks' ? 'text-amber-400 fill-amber-400' : 'text-ink-gray-5'
+            "
           />
         </template>
       </Button>
 
       <!-- Type Filter Dropdown -->
-      <Dropdown
-        :options="typeDropdownOptions"
-        align="end"
-      >
+      <Dropdown :options="typeDropdownOptions" align="end">
         <template #default>
           <Button
             size="sm"
@@ -440,7 +447,9 @@ onMounted(() => {
     <div class="flex-1 overflow-y-auto p-3 space-y-3">
       <!-- Active Tab Matching Section -->
       <div
-        v-if="activeTab?.domain && !searchQuery && activeTabFilter === 'all' && selectedType === 'All'"
+        v-if="
+          activeTab?.domain && !searchQuery && activeTabFilter === 'all' && selectedType === 'All'
+        "
         class="bg-surface-base border border-outline-gray-2 rounded-4 p-2.5 shadow-elevation-1 space-y-2"
       >
         <div class="flex items-center justify-between text-xs">
@@ -448,11 +457,7 @@ onMounted(() => {
             <Icon icon="lucide-globe" class="size-3.5 text-ink-gray-7 flex-shrink-0" />
             <span class="truncate">{{ activeTab.domain }}</span>
           </div>
-          <Badge
-            size="sm"
-            variant="subtle"
-            :label="`${matchingSecrets.length} found`"
-          />
+          <Badge size="sm" variant="subtle" :label="`${matchingSecrets.length} found`" />
         </div>
 
         <!-- Matching items list -->
@@ -460,14 +465,16 @@ onMounted(() => {
           <div
             v-for="s in matchingSecrets"
             :key="'match-' + s.name"
-            @click="emit('select', s.name)"
             class="bg-surface-gray-2 hover:bg-surface-gray-3 border border-outline-gray-1 rounded-3 p-2 flex items-center justify-between cursor-pointer transition"
+            @click="emit('select', s.name)"
           >
             <div class="flex items-center gap-2 min-w-0 flex-1 pr-2">
               <SecretTypeIcon :type="s.secret_type" size="sm" />
               <div class="min-w-0">
                 <div class="text-xs font-semibold text-ink-gray-9 truncate">{{ s.title }}</div>
-                <div class="text-[11px] text-ink-gray-5 truncate">{{ s.username || s.email || 'No username' }}</div>
+                <div class="text-[11px] text-ink-gray-5 truncate">
+                  {{ s.username || s.email || 'No username' }}
+                </div>
               </div>
             </div>
 
@@ -509,11 +516,17 @@ onMounted(() => {
 
       <!-- Main Vault Secrets List -->
       <div>
-        <div class="text-[11px] font-bold text-ink-gray-5 px-1 mb-1.5 flex items-center justify-between">
+        <div
+          class="text-[11px] font-bold text-ink-gray-5 px-1 mb-1.5 flex items-center justify-between"
+        >
           <div class="flex items-center gap-1.5 min-w-0">
-            <span class="truncate">{{ activeTabFilter === 'bookmarks' ? 'Starred Secrets' : 'Vault Secrets' }}</span>
+            <span class="truncate">{{
+              activeTabFilter === 'bookmarks' ? 'Starred Secrets' : 'Vault Secrets'
+            }}</span>
             <span v-if="selectedType !== 'All'" class="text-ink-gray-4">•</span>
-            <span v-if="selectedType !== 'All'" class="text-ink-gray-7 truncate">{{ selectedType }}</span>
+            <span v-if="selectedType !== 'All'" class="text-ink-gray-7 truncate">{{
+              selectedType
+            }}</span>
             <Button
               v-if="selectedType !== 'All' || activeTabFilter === 'bookmarks'"
               size="xs"
@@ -523,25 +536,65 @@ onMounted(() => {
               @click="clearFilters"
             />
           </div>
-          <span class="flex-shrink-0">{{ (totalSecrets > secrets.length && !searchQuery && selectedType === 'All' && activeTabFilter === 'all') ? `${filteredSecrets.length} of ${totalSecrets}` : filteredSecrets.length }}</span>
+          <span class="flex-shrink-0">{{
+            totalSecrets > secrets.length &&
+            !searchQuery &&
+            selectedType === 'All' &&
+            activeTabFilter === 'all'
+              ? `${filteredSecrets.length} of ${totalSecrets}`
+              : filteredSecrets.length
+          }}</span>
         </div>
 
         <!-- Loading State -->
-        <div v-if="isLoading" class="py-12 flex flex-col items-center justify-center text-ink-gray-5 text-xs gap-2">
+        <div
+          v-if="isLoading"
+          class="py-12 flex flex-col items-center justify-center text-ink-gray-5 text-xs gap-2"
+        >
           <Spinner size="md" />
           <span>Loading vault...</span>
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="filteredSecrets.length === 0" class="py-10 text-center px-4 flex flex-col items-center">
-          <div class="w-10 h-10 rounded-full bg-surface-gray-3 border border-outline-gray-2 flex items-center justify-center text-ink-gray-5 mb-2.5">
-            <Icon :icon="searchQuery ? 'lucide-search' : activeTabFilter === 'bookmarks' ? 'lucide-star' : 'lucide-lock'" class="size-4" />
+        <div
+          v-else-if="filteredSecrets.length === 0"
+          class="py-10 text-center px-4 flex flex-col items-center"
+        >
+          <div
+            class="w-10 h-10 rounded-full bg-surface-gray-3 border border-outline-gray-2 flex items-center justify-center text-ink-gray-5 mb-2.5"
+          >
+            <Icon
+              :icon="
+                searchQuery
+                  ? 'lucide-search'
+                  : activeTabFilter === 'bookmarks'
+                    ? 'lucide-star'
+                    : 'lucide-lock'
+              "
+              class="size-4"
+            />
           </div>
           <p class="text-xs text-ink-gray-8 font-semibold mb-1">
-            {{ searchQuery ? 'No matching secrets' : activeTabFilter === 'bookmarks' ? 'No starred secrets' : selectedType !== 'All' ? `No ${selectedType} secrets` : 'Vault is empty' }}
+            {{
+              searchQuery
+                ? 'No matching secrets'
+                : activeTabFilter === 'bookmarks'
+                  ? 'No starred secrets'
+                  : selectedType !== 'All'
+                    ? `No ${selectedType} secrets`
+                    : 'Vault is empty'
+            }}
           </p>
           <p class="text-[11px] text-ink-gray-5 mb-3.5 max-w-[240px]">
-            {{ searchQuery ? 'Try adjusting your search terms or clear the filter' : activeTabFilter === 'bookmarks' ? 'Star your frequently used credentials for quick access' : selectedType !== 'All' ? `No secrets found matching type "${selectedType}"` : 'Add your first password or credential to get started' }}
+            {{
+              searchQuery
+                ? 'Try adjusting your search terms or clear the filter'
+                : activeTabFilter === 'bookmarks'
+                  ? 'Star your frequently used credentials for quick access'
+                  : selectedType !== 'All'
+                    ? `No secrets found matching type "${selectedType}"`
+                    : 'Add your first password or credential to get started'
+            }}
           </p>
           <Button
             v-if="!searchQuery && activeTabFilter === 'all' && selectedType === 'All'"
@@ -566,8 +619,8 @@ onMounted(() => {
           <div
             v-for="s in filteredSecrets"
             :key="s.name"
-            @click="emit('select', s.name)"
             class="bg-surface-base hover:bg-surface-gray-1 active:bg-surface-gray-2 border border-outline-gray-2 hover:border-outline-gray-3 rounded-4 p-2.5 flex items-center justify-between cursor-pointer transition shadow-2xs group"
+            @click="emit('select', s.name)"
           >
             <div class="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
               <SecretTypeIcon :type="s.secret_type" size="md" />
@@ -577,7 +630,10 @@ onMounted(() => {
                 </div>
                 <div class="text-[11px] text-ink-gray-5 truncate flex items-center gap-1.5 mt-0.5">
                   <span>{{ s.username || s.email || s.secret_type }}</span>
-                  <span v-if="s.folder_name" class="inline-flex items-center gap-0.5 text-[10px] text-ink-gray-4">
+                  <span
+                    v-if="s.folder_name"
+                    class="inline-flex items-center gap-0.5 text-[10px] text-ink-gray-4"
+                  >
                     • <Icon icon="lucide-folder" class="size-2.5" /> {{ s.folder_name }}
                   </span>
                 </div>
@@ -608,11 +664,10 @@ onMounted(() => {
           </div>
 
           <!-- Load More Section (Pattern A) -->
-          <div
-            v-if="hasMore && !searchQuery"
-            class="pt-2 pb-1 text-center space-y-1.5"
-          >
-            <div class="text-[10px] text-ink-gray-5 flex items-center justify-center gap-1 font-medium">
+          <div v-if="hasMore && !searchQuery" class="pt-2 pb-1 text-center space-y-1.5">
+            <div
+              class="text-[10px] text-ink-gray-5 flex items-center justify-center gap-1 font-medium"
+            >
               <span>Showing {{ secrets.length }} of {{ totalSecrets }} secrets</span>
             </div>
             <Button
@@ -630,12 +685,20 @@ onMounted(() => {
     </div>
 
     <!-- Pinned Footer: Quick Full-Tab Management Bar -->
-    <div class="px-3.5 py-2 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between text-xs flex-shrink-0">
+    <div
+      class="px-3.5 py-2 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between text-xs flex-shrink-0"
+    >
       <div class="flex items-center gap-1.5 text-ink-gray-5 text-[11px] min-w-0">
-        <span class="truncate font-medium text-ink-gray-7">{{ authState?.user || 'Connected' }}</span>
+        <span class="truncate font-medium text-ink-gray-7">{{
+          authState?.user || 'Connected'
+        }}</span>
         <span class="text-ink-gray-3">•</span>
         <span class="text-ink-gray-4">
-          {{ (!searchQuery && selectedType === 'All' && activeTabFilter === 'all' && totalSecrets > 0) ? `${totalSecrets} secrets` : `${filteredSecrets.length} ${filteredSecrets.length === 1 ? 'item' : 'items'}` }}
+          {{
+            !searchQuery && selectedType === 'All' && activeTabFilter === 'all' && totalSecrets > 0
+              ? `${totalSecrets} secrets`
+              : `${filteredSecrets.length} ${filteredSecrets.length === 1 ? 'item' : 'items'}`
+          }}
         </span>
       </div>
       <Button

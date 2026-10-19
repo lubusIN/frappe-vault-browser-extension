@@ -7,14 +7,15 @@ export function extractDomain(rawUrl?: string | null): { hostname: string; rootD
     const formatted = rawUrl.includes('://') ? rawUrl : `https://${rawUrl}`;
     const parsed = new URL(formatted);
     const hostname = parsed.hostname.toLowerCase();
-    
+
     // Simple heuristic to extract main root domain (e.g. sub.example.com -> example.com)
     const parts = hostname.split('.');
     let rootDomain = hostname;
     if (parts.length > 2) {
       // Handles example.co.uk vs example.com
       const secondLast = parts[parts.length - 2];
-      const isSecondLevel = secondLast && ['co', 'com', 'org', 'net', 'edu', 'gov'].includes(secondLast);
+      const isSecondLevel =
+        secondLast && ['co', 'com', 'org', 'net', 'edu', 'gov'].includes(secondLast);
       if (isSecondLevel && parts.length > 2) {
         rootDomain = parts.slice(-3).join('.');
       } else {
@@ -31,7 +32,11 @@ export function extractDomain(rawUrl?: string | null): { hostname: string; rootD
 /**
  * Check if a secret's URL or title matches a target domain/URL.
  */
-export function matchesDomain(secretUrl?: string | null, secretTitle?: string | null, targetDomain?: string | null): boolean {
+export function matchesDomain(
+  secretUrl?: string | null,
+  secretTitle?: string | null,
+  targetDomain?: string | null
+): boolean {
   if (!targetDomain) return false;
   const cleanTarget = targetDomain.toLowerCase().trim();
 
@@ -92,13 +97,15 @@ export interface PasswordGeneratorOptions {
   symbols: boolean;
 }
 
-export function generateSecurePassword(options: PasswordGeneratorOptions = {
-  length: 16,
-  uppercase: true,
-  lowercase: true,
-  numbers: true,
-  symbols: true,
-}): string {
+export function generateSecurePassword(
+  options: PasswordGeneratorOptions = {
+    length: 16,
+    uppercase: true,
+    lowercase: true,
+    numbers: true,
+    symbols: true,
+  }
+): string {
   const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const LOWER = 'abcdefghijklmnopqrstuvwxyz';
   const NUMBERS = '0123456789';
@@ -202,7 +209,7 @@ export async function copyText(text: string, clearAfterSeconds?: number): Promis
 export function openExternalUrl(url?: string | null): void {
   if (!url || url === '#') return;
   const fullUrl = url.includes('://') ? url : `https://${url}`;
-  
+
   const g = globalThis as any;
   if (g.browser?.tabs?.create) {
     g.browser.tabs.create({ url: fullUrl });

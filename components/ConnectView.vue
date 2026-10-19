@@ -51,18 +51,15 @@ function setLocalDev() {
 
     <!-- Mode Selector Tabs using Frappe UI TabButtons -->
     <div class="px-6 mb-3">
-      <TabButtons
-        v-model="authMode"
-        :options="authModeOptions"
-        variant="subtle"
-        size="sm"
-        fluid
-      />
+      <TabButtons v-model="authMode" :options="authModeOptions" variant="subtle" size="sm" fluid />
     </div>
 
     <!-- Main Form in Espresso card -->
     <div class="flex-1 px-6 pb-6 overflow-y-auto">
-      <form @submit.prevent="handleConnect" class="space-y-3 bg-surface-base p-4 rounded-6 border border-outline-gray-2 shadow-elevation-1">
+      <form
+        class="space-y-3 bg-surface-base p-4 rounded-6 border border-outline-gray-2 shadow-elevation-1"
+        @submit.prevent="handleConnect"
+      >
         <!-- Instance URL -->
         <TextInput
           v-model="instanceUrl"

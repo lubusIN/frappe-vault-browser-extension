@@ -138,14 +138,19 @@ export function useVaultAuth() {
       return true;
     } catch (err: any) {
       console.error('Login error:', err);
-      authError.value = err.message || 'Unable to connect to Frappe Vault instance. Please check the URL.';
+      authError.value =
+        err.message || 'Unable to connect to Frappe Vault instance. Please check the URL.';
       return false;
     } finally {
       isAuthLoading.value = false;
     }
   }
 
-  async function loginWithToken(rawUrl: string, apiKey: string, apiSecret: string): Promise<boolean> {
+  async function loginWithToken(
+    rawUrl: string,
+    apiKey: string,
+    apiSecret: string
+  ): Promise<boolean> {
     isAuthLoading.value = true;
     authError.value = null;
 

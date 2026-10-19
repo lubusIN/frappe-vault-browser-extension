@@ -35,7 +35,7 @@ const secretTypeOptions = [
 
 const folderOptions = computed(() => [
   { label: '(No folder)', value: '' },
-  ...folders.value.map(f => ({ label: f.folder_name, value: f.name })),
+  ...folders.value.map((f) => ({ label: f.folder_name, value: f.name })),
 ]);
 
 const form = reactive({
@@ -145,7 +145,9 @@ async function handleSubmit() {
 <template>
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
     <!-- Top Bar (Espresso Appbar) -->
-    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
+    <div
+      class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0"
+    >
       <Button
         icon="lucide-arrow-left"
         size="sm"
@@ -166,7 +168,9 @@ async function handleSubmit() {
         class="p-2.5 rounded-4 bg-surface-base border border-outline-gray-3 text-xs text-ink-red-3"
       />
 
-      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-3">
+      <div
+        class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-3"
+      >
         <!-- Secret Type -->
         <Select
           v-model="form.secret_type"
@@ -378,7 +382,9 @@ async function handleSubmit() {
     </div>
 
     <!-- Pinned Footer: Save & Cancel -->
-    <div class="px-3.5 py-2.5 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between gap-2 text-xs flex-shrink-0">
+    <div
+      class="px-3.5 py-2.5 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between gap-2 text-xs flex-shrink-0"
+    >
       <Button
         size="sm"
         variant="subtle"

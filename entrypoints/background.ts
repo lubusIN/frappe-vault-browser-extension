@@ -30,8 +30,8 @@ export default defineBackground(() => {
       }
 
       handleGetMatchingSecrets(targetDomain)
-        .then(secrets => sendResponse({ secrets }))
-        .catch(err => {
+        .then((secrets) => sendResponse({ secrets }))
+        .catch((err) => {
           console.error('[Frappe Vault] Failed to get matching secrets:', err);
           sendResponse({ secrets: [] });
         });
@@ -40,8 +40,8 @@ export default defineBackground(() => {
 
     if (message.type === 'VAULT_DECRYPT_SECRET') {
       handleDecryptSecret(message.payload?.secretName, sender.tab?.url)
-        .then(data => sendResponse(data))
-        .catch(err => {
+        .then((data) => sendResponse(data))
+        .catch((err) => {
           console.error('[Frappe Vault] Failed to decrypt secret for autofill:', err);
           sendResponse({ error: String(err) });
         });
@@ -121,7 +121,7 @@ export default defineBackground(() => {
     }
 
     const now = Date.now();
-    let allSecrets: VaultSecretSummary[] = [];
+    let allSecrets: VaultSecretSummary[];
 
     if (secretsCache && now - secretsCache.timestamp < CACHE_TTL_MS) {
       allSecrets = secretsCache.secrets;
@@ -148,11 +148,14 @@ export default defineBackground(() => {
     }
 
     // Filter matching credentials for this domain
-    const matched = allSecrets.filter(s => matchesDomain(s.url, s.title, domain));
+    const matched = allSecrets.filter((s) => matchesDomain(s.url, s.title, domain));
     return matched;
   }
 
-  async function handleDecryptSecret(secretName: string, tabUrl?: string): Promise<{
+  async function handleDecryptSecret(
+    secretName: string,
+    tabUrl?: string
+  ): Promise<{
     success: boolean;
     username?: string;
     password?: string;
@@ -209,8 +212,15 @@ export default defineBackground(() => {
         const tabDomain = new URL(tabUrl).hostname;
         const matches = matchesDomain(detail.url, detail.title, tabDomain);
         if (!matches) {
-          console.warn('[Frappe Vault] Blocked unauthorized secret access attempt from tab:', tabDomain, detail.url);
-          return { success: false, error: 'Security restriction: Secret origin does not match the active web page' };
+          console.warn(
+            '[Frappe Vault] Blocked unauthorized secret access attempt from tab:',
+            tabDomain,
+            detail.url
+          );
+          return {
+            success: false,
+            error: 'Security restriction: Secret origin does not match the active web page',
+          };
         }
       } catch {}
     }
