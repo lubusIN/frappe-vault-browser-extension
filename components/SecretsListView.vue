@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useVaultApi } from '../composables/useVaultApi';
 import { useVaultAuth } from '../composables/useVaultAuth';
 import { useActiveTab } from '../composables/useActiveTab';
@@ -22,14 +22,28 @@ const { getSecrets, decryptSecret, toggleBookmark } = useVaultApi();
 const { authState } = useVaultAuth();
 const { activeTab, autofillCredentials } = useActiveTab();
 
+const PAGE_SIZE = 30;
 const secrets = ref<VaultSecretSummary[]>([]);
+const totalSecrets = ref(0);
 const isLoading = ref(true);
+const isLoadingMore = ref(false);
 const searchQuery = ref('');
 const activeTabFilter = ref<'all' | 'bookmarks'>('all');
 const selectedType = ref<string>('All');
+const serverSearchResults = ref<VaultSecretSummary[] | null>(null);
+const isSearchingServer = ref(false);
+let searchDebounceTimer: any = null;
 
 const copiedSecretName = ref<string | null>(null);
 const autofilledSecretName = ref<string | null>(null);
+
+const hasMore = computed(() => {
+  return secrets.value.length < totalSecrets.value;
+});
+
+const remainingCount = computed(() => {
+  return Math.max(0, totalSecrets.value - secrets.value.length);
+});
 
 function toggleStarredFilter() {
   activeTabFilter.value = activeTabFilter.value === 'bookmarks' ? 'all' : 'bookmarks';
@@ -39,6 +53,7 @@ function clearFilters() {
   selectedType.value = 'All';
   activeTabFilter.value = 'all';
   searchQuery.value = '';
+  serverSearchResults.value = null;
 }
 
 const typeCounts = computed(() => {
@@ -80,7 +95,7 @@ const typeDropdownOptions = computed<DropdownOptions>(() => [
     hideLabel: false,
     options: [
       {
-        label: `All Types (${secrets.value.length})`,
+        label: `All Types (${totalSecrets.value || secrets.value.length})`,
         icon: 'lucide-layers',
         selected: selectedType.value === 'All',
         onClick: () => {
@@ -131,20 +146,80 @@ const typeDropdownOptions = computed<DropdownOptions>(() => [
   },
 ]);
 
-async function fetchVaultSecrets() {
-  isLoading.value = true;
+async function fetchVaultSecrets(reset = true) {
+  if (reset) {
+    isLoading.value = true;
+  }
   try {
     const res = await getSecrets({
-      limit: 100,
+      limit: PAGE_SIZE,
+      offset: 0,
       order_by: 'modified desc',
     });
     secrets.value = res.secrets || [];
+    totalSecrets.value = res.total ?? secrets.value.length;
   } catch (err) {
     console.error('Failed to fetch secrets:', err);
   } finally {
     isLoading.value = false;
   }
 }
+
+async function handleLoadMore() {
+  if (isLoadingMore.value || !hasMore.value) return;
+  isLoadingMore.value = true;
+  try {
+    const res = await getSecrets({
+      limit: PAGE_SIZE,
+      offset: secrets.value.length,
+      order_by: 'modified desc',
+    });
+    const newItems = res.secrets || [];
+    const existingNames = new Set(secrets.value.map(s => s.name));
+    for (const item of newItems) {
+      if (!existingNames.has(item.name)) {
+        secrets.value.push(item);
+      }
+    }
+    if (res.total !== undefined) {
+      totalSecrets.value = res.total;
+    }
+  } catch (err) {
+    console.error('Failed to load more secrets:', err);
+  } finally {
+    isLoadingMore.value = false;
+  }
+}
+
+// Watch search query with debounce: if vault has more items than loaded locally, query server
+watch(searchQuery, (newVal) => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  const q = newVal.trim();
+  if (!q) {
+    serverSearchResults.value = null;
+    return;
+  }
+  if (totalSecrets.value > secrets.value.length) {
+    searchDebounceTimer = setTimeout(async () => {
+      isSearchingServer.value = true;
+      try {
+        const res = await getSecrets({
+          search: q,
+          limit: 50,
+          order_by: 'modified desc',
+        });
+        serverSearchResults.value = res.secrets || [];
+      } catch (err) {
+        console.warn('Server search failed, falling back to local filter:', err);
+        serverSearchResults.value = null;
+      } finally {
+        isSearchingServer.value = false;
+      }
+    }, 250);
+  } else {
+    serverSearchResults.value = null;
+  }
+});
 
 // Matching secrets for the active tab domain
 const matchingSecrets = computed(() => {
@@ -154,9 +229,10 @@ const matchingSecrets = computed(() => {
   );
 });
 
-// Filtered secrets list
+// Filtered secrets list (supports both server search results and local filtering)
 const filteredSecrets = computed(() => {
-  return secrets.value.filter(s => {
+  const source = serverSearchResults.value !== null ? serverSearchResults.value : secrets.value;
+  return source.filter(s => {
     // Bookmark filter
     if (activeTabFilter.value === 'bookmarks' && !s.is_bookmark) {
       return false;
@@ -167,8 +243,8 @@ const filteredSecrets = computed(() => {
       return false;
     }
 
-    // Search query
-    if (searchQuery.value.trim()) {
+    // Search query (when filtered locally)
+    if (serverSearchResults.value === null && searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase().trim();
       const matchTitle = s.title?.toLowerCase().includes(q);
       const matchUser = s.username?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
@@ -298,7 +374,8 @@ onMounted(() => {
           variant="subtle"
         >
           <template #prefix>
-            <Icon icon="lucide-search" class="size-3.5 text-ink-gray-4" />
+            <Spinner v-if="isSearchingServer" size="xs" />
+            <Icon v-else icon="lucide-search" class="size-3.5 text-ink-gray-4" />
           </template>
           <template #suffix>
             <Button
@@ -446,7 +523,7 @@ onMounted(() => {
               @click="clearFilters"
             />
           </div>
-          <span class="flex-shrink-0">{{ filteredSecrets.length }}</span>
+          <span class="flex-shrink-0">{{ (totalSecrets > secrets.length && !searchQuery && selectedType === 'All' && activeTabFilter === 'all') ? `${filteredSecrets.length} of ${totalSecrets}` : filteredSecrets.length }}</span>
         </div>
 
         <!-- Loading State -->
@@ -529,6 +606,25 @@ onMounted(() => {
               />
             </div>
           </div>
+
+          <!-- Load More Section (Pattern A) -->
+          <div
+            v-if="hasMore && !searchQuery"
+            class="pt-2 pb-1 text-center space-y-1.5"
+          >
+            <div class="text-[10px] text-ink-gray-5 flex items-center justify-center gap-1 font-medium">
+              <span>Showing {{ secrets.length }} of {{ totalSecrets }} secrets</span>
+            </div>
+            <Button
+              size="xs"
+              variant="subtle"
+              :loading="isLoadingMore"
+              icon-left="lucide-chevron-down"
+              :label="`Load more (${remainingCount} remaining)`"
+              class="w-full justify-center text-ink-gray-7 hover:text-ink-gray-9"
+              @click="handleLoadMore"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -538,7 +634,9 @@ onMounted(() => {
       <div class="flex items-center gap-1.5 text-ink-gray-5 text-[11px] min-w-0">
         <span class="truncate font-medium text-ink-gray-7">{{ authState?.user || 'Connected' }}</span>
         <span class="text-ink-gray-3">•</span>
-        <span class="text-ink-gray-4">{{ filteredSecrets.length }} {{ filteredSecrets.length === 1 ? 'item' : 'items' }}</span>
+        <span class="text-ink-gray-4">
+          {{ (!searchQuery && selectedType === 'All' && activeTabFilter === 'all' && totalSecrets > 0) ? `${totalSecrets} secrets` : `${filteredSecrets.length} ${filteredSecrets.length === 1 ? 'item' : 'items'}` }}
+        </span>
       </div>
       <Button
         size="xs"
