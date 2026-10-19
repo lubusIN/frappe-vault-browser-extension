@@ -31,6 +31,7 @@ export function extractDomain(rawUrl?: string | null): { hostname: string; rootD
 
 /**
  * Check if a secret's URL or title matches a target domain/URL.
+ * Prevents phishing by strictly enforcing root domain boundaries.
  */
 export function matchesDomain(
   secretUrl?: string | null,
@@ -39,24 +40,36 @@ export function matchesDomain(
 ): boolean {
   if (!targetDomain) return false;
   const cleanTarget = targetDomain.toLowerCase().trim();
+  const { hostname: targetHost, rootDomain: targetRoot } = extractDomain(cleanTarget);
 
   if (secretUrl) {
-    const { hostname, rootDomain } = extractDomain(secretUrl);
-    if (
-      hostname.includes(cleanTarget) ||
-      cleanTarget.includes(hostname) ||
-      rootDomain.includes(cleanTarget) ||
-      cleanTarget.includes(rootDomain)
-    ) {
-      return true;
+    const { hostname: secretHost, rootDomain: secretRoot } = extractDomain(secretUrl);
+    if (secretHost && targetHost) {
+      // 1. Exact host match (e.g. github.com === github.com or app.frappe.io === app.frappe.io)
+      if (secretHost === targetHost) return true;
+
+      // 2. Subdomain hierarchy match (e.g. gist.github.com is subdomain of github.com)
+      if (secretHost.endsWith(`.${targetHost}`) || targetHost.endsWith(`.${secretHost}`)) {
+        return true;
+      }
+
+      // 3. Shared root domain match (e.g. api.github.com and gist.github.com share github.com)
+      if (secretRoot && targetRoot && secretRoot === targetRoot) {
+        return true;
+      }
     }
+    // If secretUrl is explicitly specified but does not match target, do not match by title
+    return false;
   }
 
   if (secretTitle) {
     const cleanTitle = secretTitle.toLowerCase().trim();
-    const targetBase = cleanTarget.split('.')[0] || '';
-    if (targetBase.length >= 3 && cleanTitle.includes(targetBase)) {
-      return true;
+    const targetBase = targetRoot ? targetRoot.split('.')[0] : targetHost.split('.')[0];
+    if (targetBase && targetBase.length >= 3) {
+      const regex = new RegExp(`\\b${targetBase}\\b`, 'i');
+      if (regex.test(cleanTitle)) {
+        return true;
+      }
     }
   }
 
@@ -91,21 +104,37 @@ export function formatRelativeTime(dateString?: string | null): string {
  */
 export interface PasswordGeneratorOptions {
   length: number;
-  uppercase: boolean;
-  lowercase: boolean;
-  numbers: boolean;
-  symbols: boolean;
+  uppercase?: boolean;
+  lowercase?: boolean;
+  numbers?: boolean;
+  symbols?: boolean;
 }
 
+/**
+ * Generate a cryptographically secure random password.
+ * Accepts either a length number or options object.
+ */
 export function generateSecurePassword(
-  options: PasswordGeneratorOptions = {
+  lengthOrOptions?: number | PasswordGeneratorOptions,
+  maybeOptions?: Partial<PasswordGeneratorOptions>
+): string {
+  const defaultOptions: PasswordGeneratorOptions = {
     length: 16,
     uppercase: true,
     lowercase: true,
     numbers: true,
     symbols: true,
+  };
+
+  let options: PasswordGeneratorOptions;
+  if (typeof lengthOrOptions === 'number') {
+    options = { ...defaultOptions, ...maybeOptions, length: lengthOrOptions };
+  } else if (lengthOrOptions && typeof lengthOrOptions === 'object') {
+    options = { ...defaultOptions, ...lengthOrOptions };
+  } else {
+    options = defaultOptions;
   }
-): string {
+
   const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const LOWER = 'abcdefghijklmnopqrstuvwxyz';
   const NUMBERS = '0123456789';
@@ -139,7 +168,7 @@ export function generateSecurePassword(
     charPool = LOWER + NUMBERS;
   }
 
-  const length = Math.max(options.length, requiredChars.length);
+  const length = Math.max(options.length || 16, requiredChars.length);
   const remainingLength = length - requiredChars.length;
   const resultChars = [...requiredChars];
 
@@ -164,6 +193,43 @@ export function generateSecurePassword(
   }
 
   return resultChars.join('');
+}
+
+/**
+ * Calculate password strength score and label.
+ */
+export function calculatePasswordStrength(password?: string | null): {
+  score: number;
+  label: 'Very Weak' | 'Weak' | 'Medium' | 'Strong' | 'Very Strong';
+  color: 'red' | 'amber' | 'blue' | 'green';
+} {
+  if (!password || password.length === 0) {
+    return { score: 0, label: 'Very Weak', color: 'red' };
+  }
+
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 14) score += 1;
+  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+  if (/[0-9]/.test(password)) score += 0.5;
+  if (/[^A-Za-z0-9]/.test(password)) score += 0.5;
+
+  const total = Math.min(4, Math.floor(score));
+  const ratings: Record<
+    number,
+    {
+      label: 'Very Weak' | 'Weak' | 'Medium' | 'Strong' | 'Very Strong';
+      color: 'red' | 'amber' | 'blue' | 'green';
+    }
+  > = {
+    0: { label: 'Very Weak', color: 'red' },
+    1: { label: 'Weak', color: 'red' },
+    2: { label: 'Medium', color: 'amber' },
+    3: { label: 'Strong', color: 'blue' },
+    4: { label: 'Very Strong', color: 'green' },
+  };
+
+  return { score: total, ...ratings[total]! };
 }
 
 function cryptoRandomInt(max: number): number {

@@ -9,7 +9,7 @@ export function useActiveTab() {
     try {
       if (typeof browser !== 'undefined' && browser.tabs) {
         const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-        const current = tabs[0];
+        const current = tabs?.[0];
         if (current && current.url) {
           const { rootDomain } = extractDomain(current.url);
           activeTab.value = {
@@ -31,7 +31,7 @@ export function useActiveTab() {
     try {
       if (typeof browser !== 'undefined' && browser.tabs) {
         const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-        const current = tabs[0];
+        const current = tabs?.[0];
         if (current && current.id) {
           const response = await browser.tabs.sendMessage(current.id, {
             type: 'AUTOFILL_CREDENTIALS',

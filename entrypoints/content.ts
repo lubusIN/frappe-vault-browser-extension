@@ -1,4 +1,5 @@
 import { getStoredSettings } from '../utils/storage';
+import { isEligibleInput } from '../utils/autofill';
 
 export default defineContentScript({
   matches: ['*://*/*'],
@@ -430,82 +431,6 @@ export default defineContentScript({
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
     `;
-
-    /**
-     * Check if an element is an eligible login/password input
-     */
-    function isEligibleInput(el: HTMLElement | null): el is HTMLInputElement {
-      if (!el || el.tagName !== 'INPUT') return false;
-      const input = el as HTMLInputElement;
-
-      if (input.disabled || input.readOnly) return false;
-      if (input.offsetParent === null && input.offsetWidth === 0 && input.offsetHeight === 0)
-        return false;
-
-      const type = (input.type || 'text').toLowerCase();
-      const nonEligibleTypes = [
-        'hidden',
-        'submit',
-        'button',
-        'reset',
-        'checkbox',
-        'radio',
-        'file',
-        'image',
-        'color',
-        'range',
-        'date',
-        'number',
-      ];
-      if (nonEligibleTypes.includes(type)) return false;
-
-      if (input.closest('#frappe-vault-autofill-root')) return false;
-
-      const autocomplete = (input.autocomplete || '').toLowerCase();
-      const name = (input.name || '').toLowerCase();
-      const id = (input.id || '').toLowerCase();
-      const placeholder = (input.placeholder || '').toLowerCase();
-
-      // Password inputs
-      if (type === 'password') return true;
-
-      // Autocomplete username/email
-      if (['username', 'email', 'current-password', 'new-password'].includes(autocomplete))
-        return true;
-
-      // Common login field names
-      if (
-        name.includes('user') ||
-        name.includes('login') ||
-        name.includes('email') ||
-        name.includes('auth') ||
-        name.includes('pass')
-      )
-        return true;
-      if (
-        id.includes('user') ||
-        id.includes('login') ||
-        id.includes('email') ||
-        id.includes('auth') ||
-        id.includes('pass')
-      )
-        return true;
-      if (
-        placeholder.includes('email') ||
-        placeholder.includes('username') ||
-        placeholder.includes('user') ||
-        placeholder.includes('login')
-      )
-        return true;
-
-      // Form heuristic
-      const form = input.form || input.closest('form');
-      if (form && form.querySelector('input[type="password"]')) {
-        return true;
-      }
-
-      return false;
-    }
 
     /**
      * Fetch matching secrets for current page URL & domain
