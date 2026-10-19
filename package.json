@@ -1,0 +1,32 @@
+{
+  "name": "vault-browser-extension",
+  "description": "Browser extension for Frappe Vault to manage secrets and passwords",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "compile": "vue-tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.59.0",
+    "frappe-ui": "^1.0.2",
+    "vue": "^3.5.29"
+  },
+  "devDependencies": {
+    "@wxt-dev/module-vue": "^1.0.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.5",
+    "vue-tsc": "^3.2.5",
+    "wxt": "^0.21.4"
+  }
+}

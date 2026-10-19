@@ -1,0 +1,21 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": false,
+    "verbatimModuleSyntax": false
+  },
+  "include": [
+    "./entrypoints/**/*",
+    "./components/**/*",
+    "./composables/**/*",
+    "./utils/**/*",
+    "./types/**/*",
+    "./.wxt/wxt.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".output"
+  ]
+}
