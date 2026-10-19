@@ -7,7 +7,7 @@ import PasswordGeneratorModal from './PasswordGeneratorModal.vue';
 import { Button, TextInput, Textarea, Password, ErrorMessage, Select, Icon } from 'frappe-ui';
 
 const emit = defineEmits<{
-  (e: 'close'): void;
+  (e: 'back'): void;
   (e: 'created', secretName: string): void;
 }>();
 
@@ -68,7 +68,7 @@ function handleKeydown(e: KeyboardEvent) {
     if (showGeneratorModal.value) {
       showGeneratorModal.value = false;
     } else {
-      emit('close');
+      emit('back');
     }
   }
 }
@@ -133,7 +133,6 @@ async function handleSubmit() {
 
     const res = await createSecret(payload);
     emit('created', res.name);
-    emit('close');
   } catch (err: any) {
     console.error('Failed to create secret:', err);
     errorMessage.value = err.message || 'Failed to save secret';
@@ -144,36 +143,30 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div
-    class="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs flex flex-col justify-end sm:justify-center p-0 sm:p-4"
-    @click.self="emit('close')"
-  >
-    <div class="bg-surface-base rounded-t-6 sm:rounded-6 shadow-elevation-3 border border-outline-gray-2 w-full h-[90%] max-h-[520px] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
-      <!-- Modal Header (Espresso Appbar) -->
-      <div class="px-4 py-3 border-b border-outline-gray-2 flex items-center justify-between">
-        <h2 class="text-xs font-bold text-ink-gray-9 flex items-center gap-1.5">
-          <Icon icon="lucide-plus" class="size-4 text-ink-gray-7" />
-          Add New Secret
-        </h2>
-        <Button
-          icon="lucide-x"
-          size="xs"
-          variant="ghost"
-          label="Close"
-          tooltip="Close"
-          @click="emit('close')"
-        />
-      </div>
+  <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
+    <!-- Top Bar (Espresso Appbar) -->
+    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
+      <Button
+        icon-left="lucide-arrow-left"
+        label="Vault"
+        size="sm"
+        variant="ghost"
+        @click="emit('back')"
+      />
+      <h2 class="text-xs font-bold text-ink-gray-9">New Secret</h2>
+      <div class="w-8"></div>
+    </div>
 
-      <!-- Modal Body -->
-      <div class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
-        <!-- Error Alert using Frappe UI ErrorMessage -->
-        <ErrorMessage
-          v-if="errorMessage"
-          :message="errorMessage"
-          class="p-2.5 rounded-4 bg-surface-gray-2 border border-outline-gray-3 text-xs"
-        />
+    <!-- Body (Espresso cards) -->
+    <div class="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs">
+      <!-- Error Alert using Frappe UI ErrorMessage -->
+      <ErrorMessage
+        v-if="errorMessage"
+        :message="errorMessage"
+        class="p-2.5 rounded-4 bg-surface-base border border-outline-gray-3 text-xs text-ink-red-3"
+      />
 
+      <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-3">
         <!-- Secret Type -->
         <Select
           v-model="form.secret_type"
@@ -382,29 +375,27 @@ async function handleSubmit() {
           variant="outline"
         />
       </div>
+    </div>
 
-      <!-- Footer Actions (Espresso button group) -->
-      <div class="p-3 border-t border-outline-gray-2 flex gap-2">
-        <Button
-          class="flex-1 justify-center"
-          size="sm"
-          variant="subtle"
-          theme="gray"
-          @click="emit('close')"
-        >
-          Cancel
-        </Button>
-        <Button
-          class="flex-1 justify-center"
-          size="sm"
-          variant="solid"
-          :loading="isSubmitting"
-          loading-text="Saving..."
-          @click="handleSubmit"
-        >
-          Save Secret
-        </Button>
-      </div>
+    <!-- Pinned Footer: Save & Cancel -->
+    <div class="px-3.5 py-2.5 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between gap-2 text-xs flex-shrink-0">
+      <Button
+        size="sm"
+        variant="subtle"
+        class="flex-1 justify-center"
+        label="Cancel"
+        @click="emit('back')"
+      />
+      <Button
+        size="sm"
+        variant="solid"
+        class="flex-1 justify-center"
+        :loading="isSubmitting"
+        loading-text="Saving..."
+        icon-left="lucide-check"
+        label="Save Secret"
+        @click="handleSubmit"
+      />
     </div>
 
     <!-- Password Generator Submodal -->

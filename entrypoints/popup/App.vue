@@ -6,19 +6,17 @@ import ConnectView from '../../components/ConnectView.vue';
 import SecretsListView from '../../components/SecretsListView.vue';
 import SecretDetailView from '../../components/SecretDetailView.vue';
 import SettingsView from '../../components/SettingsView.vue';
-import NewSecretModal from '../../components/NewSecretModal.vue';
+import NewSecretView from '../../components/NewSecretView.vue';
 import PasswordGeneratorModal from '../../components/PasswordGeneratorModal.vue';
 import VaultIcon from '../../components/VaultIcon.vue';
 
-type Screen = 'list' | 'detail' | 'settings';
+type Screen = 'list' | 'detail' | 'settings' | 'new-secret';
 
 const { authState, isAuthLoading, initAuth } = useVaultAuth();
 
 const currentScreen = ref<Screen>('list');
 const selectedSecretName = ref<string>('');
 
-// Modals
-const showNewSecretModal = ref(false);
 const newSecretInitialUrl = ref<string | undefined>(undefined);
 const newSecretInitialTitle = ref<string | undefined>(undefined);
 
@@ -36,7 +34,7 @@ function handleSelectSecret(secretName: string) {
 function handleOpenNewSecret(initialUrl?: string, initialTitle?: string) {
   newSecretInitialUrl.value = initialUrl;
   newSecretInitialTitle.value = initialTitle;
-  showNewSecretModal.value = true;
+  currentScreen.value = 'new-secret';
 }
 
 function handleSecretCreated(secretName: string) {
@@ -89,16 +87,17 @@ function handleSecretDeleted(_secretName: string) {
           key="settings"
           @back="currentScreen = 'list'"
         />
-      </Transition>
 
-      <!-- New Secret Modal -->
-      <NewSecretModal
-        v-if="showNewSecretModal"
-        :initial-url="newSecretInitialUrl"
-        :initial-title="newSecretInitialTitle"
-        @close="showNewSecretModal = false"
-        @created="handleSecretCreated"
-      />
+        <!-- New Secret View -->
+        <NewSecretView
+          v-else-if="currentScreen === 'new-secret'"
+          key="new-secret"
+          :initial-url="newSecretInitialUrl"
+          :initial-title="newSecretInitialTitle"
+          @back="currentScreen = 'list'"
+          @created="handleSecretCreated"
+        />
+      </Transition>
 
       <!-- Password Generator Modal -->
       <PasswordGeneratorModal
