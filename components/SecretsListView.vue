@@ -184,7 +184,7 @@ async function handleQuickCopyPassword(secret: VaultSecretSummary, event: Event)
   event.stopPropagation();
   try {
     const full = await decryptSecret(secret.name);
-    const pwd = full.decrypted?.password || full.decrypted?.api_secret || full.decrypted?.card_number;
+    const pwd = full.decrypted?.password || (full as any).password || full.decrypted?.api_secret || (full as any).api_secret || full.decrypted?.card_number || (full as any).card_number;
     if (pwd) {
       await copyText(pwd, 30);
       copiedSecretName.value = secret.name;
@@ -203,7 +203,7 @@ async function handleQuickAutofill(secret: VaultSecretSummary, event: Event) {
   event.stopPropagation();
   try {
     const full = await decryptSecret(secret.name);
-    const pwd = full.decrypted?.password || '';
+    const pwd = full.decrypted?.password || (full as any).password || '';
     const ok = await autofillCredentials(secret.username || secret.email || '', pwd);
     if (ok) {
       autofilledSecretName.value = secret.name;

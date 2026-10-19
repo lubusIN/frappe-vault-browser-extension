@@ -44,20 +44,13 @@ const props = withDefaults(
       <Icon
         v-if="icon"
         :icon="icon"
-        class="size-3.5 text-ink-gray-4 flex-shrink-0 mt-0.5"
+        class="size-3.5 text-ink-gray-4 flex-shrink-0"
       />
       <div class="min-w-0 flex-1">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
           <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider">
             {{ label }}
           </span>
-          <Badge
-            v-if="badgeLabel"
-            size="sm"
-            :theme="badgeTheme"
-            variant="subtle"
-            :label="badgeLabel"
-          />
         </div>
 
         <!-- Custom slot or standard text -->
@@ -82,8 +75,8 @@ const props = withDefaults(
               class="truncate select-all"
               :class="isMono ? 'font-mono text-xs' : 'text-xs'"
             >
-              <span v-if="isRevealed && value">
-                {{ value }}
+              <span v-if="isRevealed" class="text-ink-gray-9 font-medium">
+                {{ value || '(empty)' }}
               </span>
               <span v-else-if="loading" class="text-ink-gray-4 italic text-[11px]">
                 Decrypting...
@@ -106,8 +99,17 @@ const props = withDefaults(
       </div>
     </div>
 
-    <!-- Actions using Frappe UI Button defaults -->
-    <div class="flex items-center gap-0.5 flex-shrink-0">
+    <!-- Actions using Frappe UI Button defaults (Vertically centered) -->
+    <div class="flex items-center gap-1.5 flex-shrink-0">
+      <Badge
+        v-if="badgeLabel"
+        size="sm"
+        :theme="badgeTheme"
+        variant="subtle"
+        :label="badgeLabel"
+        class="capitalize"
+      />
+
       <Button
         v-if="canReveal"
         :icon="isRevealed ? 'lucide-eye-off' : 'lucide-eye'"

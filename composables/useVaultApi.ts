@@ -104,6 +104,29 @@ export function useVaultApi() {
   }
 
   async function decryptSecret(name: string): Promise<VaultSecretDetail> {
+    try {
+      // 1. Primary: GET on frappe_vault.api.secrets.get with decrypt=1 (CSRF-safe for browser extensions)
+      const res = await makeRequest<VaultSecretDetail>('frappe_vault.api.secrets.get', {
+        method: 'GET',
+        params: { name, decrypt: 1 },
+      });
+      if (res) return res;
+    } catch (err) {
+      console.warn('GET secrets.get with decrypt=1 failed, trying secrets.decrypt:', err);
+    }
+
+    try {
+      // 2. Fallback: GET on frappe_vault.api.secrets.decrypt (whitelisted methods accept GET query params in Frappe)
+      const res = await makeRequest<VaultSecretDetail>('frappe_vault.api.secrets.decrypt', {
+        method: 'GET',
+        params: { name },
+      });
+      if (res) return res;
+    } catch (err) {
+      console.warn('GET secrets.decrypt failed, trying POST:', err);
+    }
+
+    // 3. Fallback: POST on frappe_vault.api.secrets.decrypt
     return await makeRequest<VaultSecretDetail>('frappe_vault.api.secrets.decrypt', {
       method: 'POST',
       body: { name },

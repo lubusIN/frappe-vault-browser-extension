@@ -65,7 +65,8 @@ async function loadSecret() {
   isLoading.value = true;
   error.value = null;
   try {
-    const data = await getSecret(props.secretName, false);
+    // 1. Fetch secret details with decrypt=true so decrypted data is ready immediately
+    const data = await getSecret(props.secretName, true);
     secret.value = data;
 
     if (data.has_totp) {
@@ -73,19 +74,29 @@ async function loadSecret() {
       startTotpCountdown();
     }
   } catch (err: any) {
-    error.value = err.message || 'Failed to load secret details';
+    // 2. If decrypt fails (e.g. view-only permissions), fallback to decrypt=false
+    try {
+      const data = await getSecret(props.secretName, false);
+      secret.value = data;
+      if (data.has_totp) {
+        fetchLiveTotp();
+        startTotpCountdown();
+      }
+    } catch (fallbackErr: any) {
+      error.value = fallbackErr.message || err.message || 'Failed to load secret details';
+    }
   } finally {
     isLoading.value = false;
   }
 }
 
 async function ensureDecrypted(): Promise<boolean> {
-  if (secret.value?.decrypted) return true;
+  if (secret.value?.decrypted && Object.keys(secret.value.decrypted).length > 0) return true;
   isDecrypting.value = true;
   try {
     const full = await decryptSecret(props.secretName);
-    if (secret.value) {
-      secret.value.decrypted = full.decrypted;
+    if (secret.value && full) {
+      secret.value.decrypted = full.decrypted || (full as any);
       return true;
     }
   } catch (err: any) {
@@ -113,7 +124,7 @@ async function toggleReveal(field: 'password' | 'apiSecret' | 'cardNumber' | 'ca
   }
 
   const ok = await ensureDecrypted();
-  if (ok) {
+  if (ok || secret.value?.decrypted) {
     target.value = true;
     scheduleAutoHide();
   }
@@ -312,7 +323,7 @@ onUnmounted(() => {
     <!-- Secret Details Body -->
     <div v-else-if="secret" class="flex-1 p-3.5 overflow-y-auto space-y-3">
       <!-- Title & Badges Header Card -->
-      <div class="flex items-start gap-3 bg-surface-base p-3 rounded-6 border border-outline-gray-2 shadow-elevation-1">
+      <div class="flex items-center gap-3 bg-surface-base p-3 rounded-6 border border-outline-gray-2 shadow-elevation-1">
         <SecretTypeIcon :type="secret.secret_type" size="md" />
         <div class="flex-1 min-w-0">
           <h1 class="text-sm font-bold text-ink-gray-9 truncate">{{ secret.title }}</h1>
@@ -359,7 +370,7 @@ onUnmounted(() => {
           />
 
           <Button
-            v-if="secret.has_password"
+            v-if="secret.secret_type === 'Password' || secret.has_password"
             size="sm"
             variant="subtle"
             class="flex-1 justify-center"
@@ -382,7 +393,7 @@ onUnmounted(() => {
           />
 
           <Button
-            v-if="secret.has_api_secret || secret.decrypted?.api_secret"
+            v-if="secret.secret_type === 'API Key' || secret.has_api_secret || secret.decrypted?.api_secret"
             size="sm"
             variant="solid"
             class="flex-1 justify-center"
@@ -395,7 +406,7 @@ onUnmounted(() => {
         <!-- Credit Card Quick Actions -->
         <template v-else-if="secret.secret_type === 'Credit Card'">
           <Button
-            v-if="secret.has_card_number || secret.decrypted?.card_number"
+            v-if="secret.secret_type === 'Credit Card' || secret.has_card_number || secret.decrypted?.card_number"
             size="sm"
             variant="solid"
             class="flex-1 justify-center"
@@ -405,7 +416,7 @@ onUnmounted(() => {
           />
 
           <Button
-            v-if="secret.has_card_cvv || secret.decrypted?.card_cvv"
+            v-if="secret.secret_type === 'Credit Card' || secret.has_card_cvv || secret.decrypted?.card_cvv"
             size="sm"
             variant="subtle"
             class="flex-1 justify-center"
@@ -428,7 +439,7 @@ onUnmounted(() => {
           />
 
           <Button
-            v-if="secret.has_db_password || secret.decrypted?.db_password"
+            v-if="secret.secret_type === 'Database' || secret.has_db_password || secret.decrypted?.db_password"
             size="sm"
             variant="solid"
             class="flex-1 justify-center"
@@ -561,7 +572,7 @@ onUnmounted(() => {
             @copy="handleCopy('api_key', secret.api_key)"
           />
           <SecretFieldRow
-            v-if="secret.has_api_secret || secret.decrypted?.api_secret"
+            v-if="secret.secret_type === 'API Key' || secret.has_api_secret || secret.decrypted?.api_secret"
             label="API Secret"
             :value="secret.decrypted?.api_secret"
             icon="lucide-key-round"
@@ -587,7 +598,7 @@ onUnmounted(() => {
             @copy="handleCopy('card_holder', secret.card_holder)"
           />
           <SecretFieldRow
-            v-if="secret.has_card_number || secret.decrypted?.card_number"
+            v-if="secret.secret_type === 'Credit Card' || secret.has_card_number || secret.decrypted?.card_number"
             label="Card Number"
             :value="secret.decrypted?.card_number"
             icon="lucide-credit-card"
@@ -608,7 +619,7 @@ onUnmounted(() => {
             @copy="handleCopy('card_expiry', secret.card_expiry)"
           />
           <SecretFieldRow
-            v-if="secret.has_card_cvv || secret.decrypted?.card_cvv"
+            v-if="secret.secret_type === 'Credit Card' || secret.has_card_cvv || secret.decrypted?.card_cvv"
             label="CVV"
             :value="secret.decrypted?.card_cvv"
             icon="lucide-key-round"
@@ -652,7 +663,7 @@ onUnmounted(() => {
             @copy="handleCopy('username', secret.username)"
           />
           <SecretFieldRow
-            v-if="secret.has_db_password || secret.decrypted?.db_password"
+            v-if="secret.secret_type === 'Database' || secret.has_db_password || secret.decrypted?.db_password"
             label="Database Password"
             :value="secret.decrypted?.db_password"
             icon="lucide-key-round"
