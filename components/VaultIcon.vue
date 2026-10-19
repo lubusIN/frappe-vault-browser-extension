@@ -1,0 +1,27 @@
+<script setup lang="ts">
+withDefaults(
+  defineProps<{
+    size?: string;
+  }>(),
+  {
+    size: 'size-5',
+  }
+);
+</script>
+
+<template>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 96 96"
+    fill="none"
+    class="shrink-0 inline-block overflow-hidden"
+    :class="size"
+    aria-label="Frappe Vault"
+  >
+    <rect width="96" height="96" fill="#894df8" rx="20" />
+    <path
+      fill="#fdfdfd"
+      d="m75.781 24.906-26.617-9.984a3.5 3.5 0 0 0-2.332 0l-26.617 9.984c-1.332.5-2.164 1.762-2.164 3.16 0 1.532.101 3.063.234 4.594l6.488-2.363L48 21.578l23.223 8.719A58.45 58.45 0 0 1 48 73.82c-11.879-8.953-19.832-22.062-22.395-36.57l-6.355 2.332c3.227 16.504 12.777 31.344 26.852 41.059a3.29 3.29 0 0 0 3.793 0c17.27-11.946 27.75-31.61 28.05-52.606 0-1.398-.832-2.664-2.164-3.164z"
+    />
+  </svg>
+</template>

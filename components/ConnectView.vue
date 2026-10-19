@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useVaultAuth } from '../composables/useVaultAuth';
+import VaultIcon from './VaultIcon.vue';
 import { Button, TextInput, Password, ErrorMessage, TabButtons, Icon } from 'frappe-ui';
 
 const { loginWithPassword, loginWithToken, authError, isAuthLoading } = useVaultAuth();
@@ -43,9 +44,7 @@ function setLocalDev() {
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
     <!-- Header / Brand (Espresso elevation) -->
     <div class="pt-8 pb-3 px-6 text-center flex flex-col items-center">
-      <div class="w-12 h-12 bg-surface-base border border-outline-gray-2 rounded-6 flex items-center justify-center text-ink-gray-9 shadow-elevation-1 mb-3">
-        <Icon icon="lucide-shield" class="size-6 text-ink-gray-8" />
-      </div>
+      <VaultIcon size="size-12" class="rounded-5 shadow-elevation-1 mb-3" />
       <h1 class="text-base font-bold tracking-tight text-ink-gray-9">Frappe Vault</h1>
       <p class="text-xs text-ink-gray-5 mt-0.5">Connect to your hosted vault instance</p>
     </div>

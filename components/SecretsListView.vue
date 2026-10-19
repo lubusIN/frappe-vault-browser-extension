@@ -4,6 +4,7 @@ import { useVaultApi } from '../composables/useVaultApi';
 import { useActiveTab } from '../composables/useActiveTab';
 import type { VaultSecretSummary } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
+import VaultIcon from './VaultIcon.vue';
 import { matchesDomain, copyText } from '../utils/helpers';
 import { Button, TextInput, Badge, Spinner, TabButtons, Icon } from 'frappe-ui';
 
@@ -142,9 +143,7 @@ onMounted(() => {
     <!-- Top Action Header (Espresso Appbar) -->
     <div class="px-3.5 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-2">
-        <div class="w-6 h-6 bg-surface-gray-10 text-ink-base rounded-3 flex items-center justify-center shadow-xs">
-          <Icon icon="lucide-shield" class="size-3.5" />
-        </div>
+        <VaultIcon size="size-5" class="rounded-md shadow-2xs" />
         <span class="text-xs font-bold tracking-tight text-ink-gray-9">Frappe Vault</span>
       </div>
 

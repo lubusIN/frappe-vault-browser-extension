@@ -3,6 +3,7 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useVaultAuth } from '../composables/useVaultAuth';
 import { openExternalUrl } from '../utils/helpers';
 import { getStoredSettings, setStoredSettings } from '../utils/storage';
+import VaultIcon from './VaultIcon.vue';
 import { Button, Badge, Switch, Dialog, Icon } from 'frappe-ui';
 
 const emit = defineEmits<{
@@ -189,7 +190,10 @@ async function handleConfirmLogout() {
       <!-- About Frappe Vault -->
       <div class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2.5">
         <div class="flex items-center justify-between">
-          <h3 class="text-xs font-bold text-ink-gray-9">Frappe Vault Extension</h3>
+          <div class="flex items-center gap-2">
+            <VaultIcon size="size-4" class="rounded-xs" />
+            <h3 class="text-xs font-bold text-ink-gray-9">Frappe Vault Extension</h3>
+          </div>
           <Badge size="sm" variant="subtle" label="v1.0.0" />
         </div>
         <p class="text-[11px] text-ink-gray-5 leading-relaxed">
