@@ -21,7 +21,15 @@ export default defineBackground(() => {
     }
 
     if (message.type === 'VAULT_GET_MATCHING_SECRETS') {
-      handleGetMatchingSecrets(message.payload?.domain)
+      let targetDomain = message.payload?.domain;
+      // If requested from a tab's content script, strictly enforce the tab's genuine origin
+      if (sender.tab?.url) {
+        try {
+          targetDomain = new URL(sender.tab.url).hostname;
+        } catch {}
+      }
+
+      handleGetMatchingSecrets(targetDomain)
         .then(secrets => sendResponse({ secrets }))
         .catch(err => {
           console.error('[Frappe Vault] Failed to get matching secrets:', err);
@@ -31,7 +39,7 @@ export default defineBackground(() => {
     }
 
     if (message.type === 'VAULT_DECRYPT_SECRET') {
-      handleDecryptSecret(message.payload?.secretName)
+      handleDecryptSecret(message.payload?.secretName, sender.tab?.url)
         .then(data => sendResponse(data))
         .catch(err => {
           console.error('[Frappe Vault] Failed to decrypt secret for autofill:', err);
@@ -144,7 +152,7 @@ export default defineBackground(() => {
     return matched;
   }
 
-  async function handleDecryptSecret(secretName: string): Promise<{
+  async function handleDecryptSecret(secretName: string, tabUrl?: string): Promise<{
     success: boolean;
     username?: string;
     password?: string;
@@ -193,6 +201,18 @@ export default defineBackground(() => {
 
     if (!detail) {
       return { success: false, error: 'No data returned from vault' };
+    }
+
+    // Origin verification: If triggered from a web page tab, ensure the secret belongs to this domain
+    if (tabUrl) {
+      try {
+        const tabDomain = new URL(tabUrl).hostname;
+        const matches = matchesDomain(detail.url, detail.title, tabDomain);
+        if (!matches) {
+          console.warn('[Frappe Vault] Blocked unauthorized secret access attempt from tab:', tabDomain, detail.url);
+          return { success: false, error: 'Security restriction: Secret origin does not match the active web page' };
+        }
+      } catch {}
     }
 
     const password =

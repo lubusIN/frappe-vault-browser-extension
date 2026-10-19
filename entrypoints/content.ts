@@ -407,7 +407,7 @@ export default defineContentScript({
       shadowHost.style.zIndex = '2147483647';
       shadowHost.style.pointerEvents = 'none';
 
-      shadowRoot = shadowHost.attachShadow({ mode: 'open' });
+      shadowRoot = shadowHost.attachShadow({ mode: 'closed' });
 
       const styleEl = document.createElement('style');
       styleEl.textContent = OVERLAY_STYLES;
