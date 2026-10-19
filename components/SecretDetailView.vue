@@ -9,7 +9,6 @@ import SecretFieldRow from './SecretFieldRow.vue';
 import { copyText, formatRelativeTime, openExternalUrl } from '../utils/helpers';
 import { Button, Badge, Spinner, Dialog, Progress, Icon } from 'frappe-ui';
 
-
 const emit = defineEmits<{
   (e: 'back'): void;
   (e: 'deleted', name: string): void;
@@ -221,7 +220,7 @@ const isTotpExpiringSoon = computed(() => {
 
 const openInVaultUrl = computed(() => {
   if (!authState.value?.instanceUrl || !secret.value?.name) return '#';
-  return `${authState.value.instanceUrl}/vault/secret/${secret.value.name}`;
+  return `${authState.value.instanceUrl}/vault/secrets/${secret.value.name}`;
 });
 
 function handleOpenVaultUrl() {
@@ -252,7 +251,7 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
-    <!-- Top Action Bar (Espresso Appbar) -->
+    <!-- Top Action Bar -->
     <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
       <Button
         size="sm"
@@ -275,9 +274,9 @@ onUnmounted(() => {
         <Button
           size="sm"
           variant="ghost"
-          icon="lucide-external-link"
-          label="Open in Frappe Vault Web App"
-          tooltip="Open in Frappe Vault Web App"
+          icon="lucide-pencil"
+          label="Edit in Vault"
+          tooltip="Open in Frappe Vault to edit"
           @click="handleOpenVaultUrl"
         />
         <Button
@@ -724,6 +723,22 @@ onUnmounted(() => {
         <span>ID: {{ secret.name }}</span>
         <span>Updated {{ formatRelativeTime(secret.modified) }}</span>
       </div>
+    </div>
+
+    <!-- Pinned Footer: Edit in Full Tab -->
+    <div v-if="secret" class="px-3.5 py-2.5 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between text-xs flex-shrink-0">
+      <div class="flex items-center gap-1.5 text-[11px] text-ink-gray-5">
+        <span>Updated {{ formatRelativeTime(secret?.modified) }}</span>
+      </div>
+      <Button
+        size="xs"
+        variant="solid"
+        icon-left="lucide-pencil"
+        icon-right="lucide-external-link"
+        label="Edit in Vault"
+        tooltip="Open in Frappe Vault web app for full editing"
+        @click="handleOpenVaultUrl"
+      />
     </div>
 
     <!-- Delete Confirmation using Frappe UI Dialog component -->

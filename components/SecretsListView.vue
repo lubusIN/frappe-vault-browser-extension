@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useVaultApi } from '../composables/useVaultApi';
+import { useVaultAuth } from '../composables/useVaultAuth';
 import { useActiveTab } from '../composables/useActiveTab';
 import type { VaultSecretSummary } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
 import VaultIcon from './VaultIcon.vue';
-import { matchesDomain, copyText } from '../utils/helpers';
+import { matchesDomain, copyText, openExternalUrl } from '../utils/helpers';
 import { Button, TextInput, Badge, Spinner, TabButtons, Icon } from 'frappe-ui';
 
 const emit = defineEmits<{
@@ -16,6 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const { getSecrets, decryptSecret, toggleBookmark } = useVaultApi();
+const { authState } = useVaultAuth();
 const { activeTab, autofillCredentials } = useActiveTab();
 
 const secrets = ref<VaultSecretSummary[]>([]);
@@ -127,6 +129,12 @@ async function handleToggleBookmark(secret: VaultSecretSummary, event: Event) {
     const res = await toggleBookmark(secret.name);
     secret.is_bookmark = res.is_bookmark;
   } catch {}
+}
+
+function handleOpenFullVault(path: string = '/secrets') {
+  if (authState.value?.instanceUrl) {
+    openExternalUrl(`${authState.value.instanceUrl}/vault${path}`);
+  }
 }
 
 function handleAddForCurrentTab() {
@@ -402,6 +410,23 @@ onMounted(() => {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Pinned Footer: Quick Full-Tab Management Bar -->
+    <div class="px-3.5 py-2 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between text-xs flex-shrink-0">
+      <div class="flex items-center gap-1.5 text-ink-gray-5 text-[11px] min-w-0">
+        <span class="truncate font-medium text-ink-gray-7">{{ authState?.user || 'Connected' }}</span>
+        <span class="text-ink-gray-3">•</span>
+        <span class="text-ink-gray-4">{{ filteredSecrets.length }} {{ filteredSecrets.length === 1 ? 'item' : 'items' }}</span>
+      </div>
+      <Button
+        size="xs"
+        variant="subtle"
+        icon-right="lucide-external-link"
+        label="Manage"
+        tooltip="Open Frappe Vault in a new tab"
+        @click="handleOpenFullVault('')"
+      />
     </div>
   </div>
 </template>
