@@ -142,8 +142,8 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- Options checkboxes using Frappe UI Checkbox -->
-        <div class="space-y-2 pt-1 border-t border-outline-gray-1 text-xs">
+        <!-- Options checkboxes in a 2-column grid -->
+        <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 pt-2 border-t border-outline-gray-1 text-xs">
           <Checkbox
             v-model="options.uppercase"
             label="Uppercase (A-Z)"
