@@ -5,48 +5,58 @@ import { useVaultAuth } from '../composables/useVaultAuth';
 import { useActiveTab } from '../composables/useActiveTab';
 import type { VaultSecretDetail, TotpResult } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
-import { copyText, formatRelativeTime } from '../utils/helpers';
-import {
-  ArrowLeft,
-  Star,
-  ExternalLink,
-  Copy,
-  Check,
-  Eye,
-  EyeOff,
-  Clock,
-  Globe,
-  User,
-  KeyRound,
-  ShieldAlert,
-  Zap,
-  Folder,
-} from '@lucide/vue';
+import SecretFieldRow from './SecretFieldRow.vue';
+import { copyText, formatRelativeTime, openExternalUrl } from '../utils/helpers';
+import { Button, Badge, Spinner, Dialog, Progress, Icon } from 'frappe-ui';
+
 
 const emit = defineEmits<{
   (e: 'back'): void;
+  (e: 'deleted', name: string): void;
 }>();
 
 const props = defineProps<{
   secretName: string;
 }>();
 
-const { getSecret, decryptSecret, getTotp, toggleBookmark } = useVaultApi();
+const { getSecret, decryptSecret, getTotp, toggleBookmark, deleteSecret } = useVaultApi();
 const { authState } = useVaultAuth();
-const { activeTab, autofillCredentials } = useActiveTab();
+const { autofillCredentials } = useActiveTab();
 
 const secret = ref<VaultSecretDetail | null>(null);
 const isLoading = ref(true);
 const isDecrypting = ref(false);
 const error = ref<string | null>(null);
 
+// Visibility toggles for sensitive fields
 const showPassword = ref(false);
 const showApiSecret = ref(false);
+const showCardNumber = ref(false);
 const showCardCvv = ref(false);
+const showDbPassword = ref(false);
+const showSshKey = ref(false);
+
+// Auto-hide security timer for revealed secrets
+let autoHideTimer: any = null;
+function scheduleAutoHide() {
+  if (autoHideTimer) clearTimeout(autoHideTimer);
+  autoHideTimer = setTimeout(() => {
+    showPassword.value = false;
+    showApiSecret.value = false;
+    showCardNumber.value = false;
+    showCardCvv.value = false;
+    showDbPassword.value = false;
+    showSshKey.value = false;
+  }, 30000); // 30s auto-hide timeout
+}
 
 // Copied indicators map
 const copiedField = ref<string | null>(null);
 const autofillStatus = ref<'idle' | 'success' | 'failed'>('idle');
+
+// Delete dialog confirmation
+const showDeleteConfirm = ref(false);
+const isDeleting = ref(false);
 
 // TOTP live state
 const totpData = ref<TotpResult | null>(null);
@@ -59,7 +69,6 @@ async function loadSecret() {
     const data = await getSecret(props.secretName, false);
     secret.value = data;
 
-    // Check if secret has TOTP
     if (data.has_totp) {
       fetchLiveTotp();
       startTotpCountdown();
@@ -71,50 +80,64 @@ async function loadSecret() {
   }
 }
 
-async function revealPassword() {
-  if (showPassword.value) {
-    showPassword.value = false;
+async function ensureDecrypted(): Promise<boolean> {
+  if (secret.value?.decrypted) return true;
+  isDecrypting.value = true;
+  try {
+    const full = await decryptSecret(props.secretName);
+    if (secret.value) {
+      secret.value.decrypted = full.decrypted;
+      return true;
+    }
+  } catch (err: any) {
+    console.error('Decryption failed:', err);
+  } finally {
+    isDecrypting.value = false;
+  }
+  return false;
+}
+
+async function toggleReveal(field: 'password' | 'apiSecret' | 'cardNumber' | 'cardCvv' | 'dbPassword' | 'sshKey') {
+  const map = {
+    password: showPassword,
+    apiSecret: showApiSecret,
+    cardNumber: showCardNumber,
+    cardCvv: showCardCvv,
+    dbPassword: showDbPassword,
+    sshKey: showSshKey,
+  };
+
+  const target = map[field];
+  if (target.value) {
+    target.value = false;
     return;
   }
 
-  if (!secret.value?.decrypted?.password) {
-    isDecrypting.value = true;
-    try {
-      const full = await decryptSecret(props.secretName);
-      if (secret.value) {
-        secret.value.decrypted = full.decrypted;
-      }
-    } catch (err: any) {
-      console.error('Decryption failed:', err);
-    } finally {
-      isDecrypting.value = false;
-    }
+  const ok = await ensureDecrypted();
+  if (ok) {
+    target.value = true;
+    scheduleAutoHide();
   }
-
-  showPassword.value = true;
 }
 
-async function handleCopy(text?: string | null, fieldKey: string = 'general') {
+async function handleCopy(fieldKey: string, immediateText?: string | null) {
+  let text = immediateText;
+
   if (!text) {
-    // If copying password and not yet decrypted
-    if (fieldKey === 'password' && !secret.value?.decrypted?.password) {
-      isDecrypting.value = true;
-      try {
-        const full = await decryptSecret(props.secretName);
-        if (secret.value) {
-          secret.value.decrypted = full.decrypted;
-          text = full.decrypted?.password;
-        }
-      } catch (err) {
-        isDecrypting.value = false;
-        return;
-      }
-      isDecrypting.value = false;
-    }
+    await ensureDecrypted();
+    const d = secret.value?.decrypted;
+    if (fieldKey === 'password') text = d?.password;
+    else if (fieldKey === 'api_secret') text = d?.api_secret;
+    else if (fieldKey === 'card_number') text = d?.card_number;
+    else if (fieldKey === 'card_cvv') text = d?.card_cvv;
+    else if (fieldKey === 'db_password') text = d?.db_password;
+    else if (fieldKey === 'ssh_private_key') text = d?.ssh_private_key || secret.value?.ssh_private_key;
+    else if (fieldKey === 'totp') text = totpData.value?.code;
   }
 
   if (!text) return;
-  const ok = await copyText(text);
+
+  const ok = await copyText(text, 30);
   if (ok) {
     copiedField.value = fieldKey;
     setTimeout(() => {
@@ -129,13 +152,8 @@ async function handleAutofill() {
   autofillStatus.value = 'idle';
   let pwd = secret.value?.decrypted?.password;
   if (!pwd && secret.value?.has_password) {
-    try {
-      const full = await decryptSecret(props.secretName);
-      if (secret.value) {
-        secret.value.decrypted = full.decrypted;
-        pwd = full.decrypted?.password;
-      }
-    } catch {}
+    await ensureDecrypted();
+    pwd = secret.value?.decrypted?.password;
   }
 
   const ok = await autofillCredentials(secret.value?.username || secret.value?.email || '', pwd || '');
@@ -151,6 +169,21 @@ async function handleToggleBookmark() {
     const res = await toggleBookmark(secret.value.name);
     secret.value.is_bookmark = res.is_bookmark;
   } catch {}
+}
+
+async function handleDelete() {
+  if (!secret.value) return;
+  isDeleting.value = true;
+  try {
+    await deleteSecret(secret.value.name);
+    emit('deleted', secret.value.name);
+    emit('back');
+  } catch (err: any) {
+    error.value = err.message || 'Failed to delete secret';
+  } finally {
+    isDeleting.value = false;
+    showDeleteConfirm.value = false;
+  }
 }
 
 async function fetchLiveTotp() {
@@ -171,271 +204,544 @@ function startTotpCountdown() {
   }, 1000);
 }
 
+const formattedTotpCode = computed(() => {
+  const code = totpData.value?.code;
+  if (!code || code.length !== 6) return code || '••••••';
+  return `${code.slice(0, 3)} ${code.slice(3)}`;
+});
+
+const totpProgressPercent = computed(() => {
+  const remaining = totpData.value?.remaining_seconds ?? 30;
+  return Math.round((remaining / 30) * 100);
+});
+
+const isTotpExpiringSoon = computed(() => {
+  return (totpData.value?.remaining_seconds ?? 30) <= 5;
+});
+
 const openInVaultUrl = computed(() => {
   if (!authState.value?.instanceUrl || !secret.value?.name) return '#';
   return `${authState.value.instanceUrl}/vault/secret/${secret.value.name}`;
 });
 
+function handleOpenVaultUrl() {
+  openExternalUrl(openInVaultUrl.value);
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    if (showDeleteConfirm.value) {
+      showDeleteConfirm.value = false;
+    } else {
+      emit('back');
+    }
+  }
+}
+
 onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
   loadSecret();
 });
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
   clearInterval(totpTimer);
+  if (autoHideTimer) clearTimeout(autoHideTimer);
 });
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-slate-50 text-slate-800">
-    <!-- Top Action Bar -->
-    <div class="px-3 py-2 bg-white border-b border-slate-200/80 flex items-center justify-between flex-shrink-0">
-      <button
-        type="button"
+  <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
+    <!-- Top Action Bar (Espresso Appbar) -->
+    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
+      <Button
+        size="sm"
+        variant="ghost"
+        icon-left="lucide-arrow-left"
+        label="Vault"
         @click="emit('back')"
-        class="text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center gap-1 p-1 -ml-1 rounded-md transition"
-      >
-        <ArrowLeft class="w-4 h-4" />
-        <span>Vault</span>
-      </button>
+      />
 
       <div class="flex items-center gap-1">
-        <button
-          type="button"
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="lucide-star"
+          :label="secret?.is_bookmark ? 'Remove Bookmark' : 'Bookmark'"
+          :tooltip="secret?.is_bookmark ? 'Remove Bookmark' : 'Bookmark'"
+          :class="secret?.is_bookmark ? 'text-ink-amber-6' : 'text-ink-gray-4'"
           @click="handleToggleBookmark"
-          title="Bookmark"
-          class="p-1.5 rounded-md hover:bg-slate-100 transition"
-          :class="secret?.is_bookmark ? 'text-amber-500' : 'text-slate-400 hover:text-slate-600'"
-        >
-          <Star class="w-4 h-4" :class="{ 'fill-amber-400': secret?.is_bookmark }" />
-        </button>
-        <a
-          :href="openInVaultUrl"
-          target="_blank"
-          title="Open in Frappe Vault"
-          class="p-1.5 text-slate-400 hover:text-blue-600 rounded-md hover:bg-slate-100 transition"
-        >
-          <ExternalLink class="w-4 h-4" />
-        </a>
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="lucide-external-link"
+          label="Open in Frappe Vault Web App"
+          tooltip="Open in Frappe Vault Web App"
+          @click="handleOpenVaultUrl"
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          theme="red"
+          icon="lucide-trash-2"
+          label="Delete Secret"
+          tooltip="Delete Secret"
+          @click="showDeleteConfirm = true"
+        />
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="flex-1 flex items-center justify-center p-6 text-slate-400 text-xs">
+    <!-- Loading State using Frappe UI Spinner -->
+    <div v-if="isLoading" class="flex-1 flex items-center justify-center p-6 text-ink-gray-5 text-xs">
       <div class="flex flex-col items-center gap-2">
-        <div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <Spinner size="md" />
         <span>Loading secret...</span>
       </div>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="flex-1 p-6 text-center">
-      <div class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs mb-3">
+      <div class="p-3 rounded-4 bg-surface-base border border-outline-gray-3 text-ink-red-3 text-xs mb-3">
         {{ error }}
       </div>
-      <button
-        type="button"
-        @click="loadSecret"
-        class="text-xs font-semibold text-blue-600 hover:underline"
-      >
+      <Button size="sm" variant="subtle" @click="loadSecret">
         Try again
-      </button>
+      </Button>
     </div>
 
     <!-- Secret Details Body -->
-    <div v-else-if="secret" class="flex-1 p-4 overflow-y-auto space-y-4">
-      <!-- Title & Badges Header -->
-      <div class="flex items-start gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs">
+    <div v-else-if="secret" class="flex-1 p-3.5 overflow-y-auto space-y-3">
+      <!-- Title & Badges Header Card -->
+      <div class="flex items-start gap-3 bg-surface-base p-3 rounded-6 border border-outline-gray-2 shadow-elevation-1">
         <SecretTypeIcon :type="secret.secret_type" size="md" />
         <div class="flex-1 min-w-0">
-          <h1 class="text-sm font-bold text-slate-900 truncate">{{ secret.title }}</h1>
+          <h1 class="text-sm font-bold text-ink-gray-9 truncate">{{ secret.title }}</h1>
           <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">
-              {{ secret.secret_type }}
-            </span>
-            <span v-if="secret.folder_name" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700">
-              <Folder class="w-2.5 h-2.5" />
-              {{ secret.folder_name }}
+            <Badge
+              size="sm"
+              variant="subtle"
+              :label="secret.secret_type"
+            />
+            <Badge
+              v-if="secret.folder_name"
+              size="sm"
+              variant="subtle"
+              :label="secret.folder_name"
+            />
+            <span v-if="secret.shared_by" class="text-[10px] text-ink-gray-4">
+              Shared by {{ secret.shared_by }}
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Quick Autofill Button (When on page) -->
-      <div v-if="secret.secret_type === 'Password'">
-        <button
-          type="button"
-          @click="handleAutofill"
-          class="w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-xs"
-          :class="autofillStatus === 'success' ? 'bg-emerald-600 text-white' : autofillStatus === 'failed' ? 'bg-amber-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'"
-        >
-          <Zap class="w-3.5 h-3.5" />
-          <span v-if="autofillStatus === 'success'">Autofilled into page!</span>
-          <span v-else-if="autofillStatus === 'failed'">No matching input fields on page</span>
-          <span v-else>Autofill on current page</span>
-        </button>
+      <!-- Contextual Quick Action Buttons Bar (Frappe UI defaults) -->
+      <div class="flex gap-2">
+        <!-- Password Type Quick Actions -->
+        <template v-if="secret.secret_type === 'Password'">
+          <Button
+            size="sm"
+            variant="solid"
+            class="flex-1 justify-center"
+            :icon-left="autofillStatus === 'success' ? 'lucide-check' : 'lucide-zap'"
+            :label="autofillStatus === 'success' ? 'Filled!' : autofillStatus === 'failed' ? 'Not found' : 'Autofill'"
+            @click="handleAutofill"
+          />
+
+          <Button
+            v-if="secret.username || secret.email"
+            size="sm"
+            variant="subtle"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'username' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'username' ? 'Copied!' : 'Copy User'"
+            @click="handleCopy('username', secret.username || secret.email)"
+          />
+
+          <Button
+            v-if="secret.has_password"
+            size="sm"
+            variant="subtle"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'password' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'password' ? 'Copied!' : 'Copy Pass'"
+            @click="handleCopy('password')"
+          />
+        </template>
+
+        <!-- API Key Quick Actions -->
+        <template v-else-if="secret.secret_type === 'API Key'">
+          <Button
+            v-if="secret.api_key"
+            size="sm"
+            variant="subtle"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'api_key' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'api_key' ? 'Copied!' : 'Copy Key'"
+            @click="handleCopy('api_key', secret.api_key)"
+          />
+
+          <Button
+            v-if="secret.has_api_secret || secret.decrypted?.api_secret"
+            size="sm"
+            variant="solid"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'api_secret' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'api_secret' ? 'Copied!' : 'Copy Secret'"
+            @click="handleCopy('api_secret')"
+          />
+        </template>
+
+        <!-- Credit Card Quick Actions -->
+        <template v-else-if="secret.secret_type === 'Credit Card'">
+          <Button
+            v-if="secret.has_card_number || secret.decrypted?.card_number"
+            size="sm"
+            variant="solid"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'card_number' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'card_number' ? 'Copied!' : 'Copy Number'"
+            @click="handleCopy('card_number')"
+          />
+
+          <Button
+            v-if="secret.has_card_cvv || secret.decrypted?.card_cvv"
+            size="sm"
+            variant="subtle"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'card_cvv' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'card_cvv' ? 'Copied!' : 'Copy CVV'"
+            @click="handleCopy('card_cvv')"
+          />
+        </template>
+
+        <!-- Database Quick Actions -->
+        <template v-else-if="secret.secret_type === 'Database'">
+          <Button
+            v-if="secret.db_host"
+            size="sm"
+            variant="subtle"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'db_host' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'db_host' ? 'Copied!' : 'Copy Host'"
+            @click="handleCopy('db_host', `${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`)"
+          />
+
+          <Button
+            v-if="secret.has_db_password || secret.decrypted?.db_password"
+            size="sm"
+            variant="solid"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'db_password' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'db_password' ? 'Copied!' : 'Copy Pass'"
+            @click="handleCopy('db_password')"
+          />
+        </template>
+
+        <!-- SSH Key Quick Actions -->
+        <template v-else-if="secret.secret_type === 'SSH Key'">
+          <Button
+            size="sm"
+            variant="solid"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'ssh_private_key' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'ssh_private_key' ? 'Copied!' : 'Copy Key'"
+            @click="handleCopy('ssh_private_key')"
+          />
+        </template>
+
+        <!-- Note Quick Actions -->
+        <template v-else-if="secret.secret_type === 'Note'">
+          <Button
+            v-if="secret.notes"
+            size="sm"
+            variant="subtle"
+            class="flex-1 justify-center"
+            :icon-left="copiedField === 'notes' ? 'lucide-check' : 'lucide-copy'"
+            :label="copiedField === 'notes' ? 'Copied!' : 'Copy Note'"
+            @click="handleCopy('notes', secret.notes)"
+          />
+        </template>
       </div>
 
-      <!-- Credential Fields Cards -->
-      <div class="bg-white rounded-xl border border-slate-200/80 divide-y divide-slate-100 overflow-hidden shadow-xs">
-        <!-- Website URL -->
-        <div v-if="secret.url" class="p-3 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2 min-w-0 flex-1 pr-2">
-            <Globe class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            <div class="min-w-0">
-              <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Website</div>
-              <a
-                :href="secret.url"
-                target="_blank"
-                class="text-blue-600 hover:underline truncate block text-xs"
-              >
-                {{ secret.url }}
-              </a>
-            </div>
+      <!-- Live TOTP (2FA) Authenticator Card -->
+      <div
+        v-if="secret.has_totp"
+        class="bg-surface-base rounded-6 border border-outline-gray-2 p-3 shadow-elevation-1 space-y-2 cursor-pointer hover:border-outline-gray-3 transition"
+        title="Click to copy 2FA code"
+        @click="handleCopy('totp')"
+      >
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5 font-semibold text-ink-gray-9">
+            <Icon
+              icon="lucide-clock"
+              class="size-3.5"
+              :class="isTotpExpiringSoon ? 'text-ink-red-3 animate-pulse' : 'text-ink-gray-7'"
+            />
+            <span>Two-Factor Authentication</span>
           </div>
-          <button
-            type="button"
-            @click="handleCopy(secret.url, 'url')"
-            class="p-1.5 text-slate-400 hover:text-slate-700 rounded-md transition"
-          >
-            <Check v-if="copiedField === 'url'" class="w-3.5 h-3.5 text-emerald-600" />
-            <Copy v-else class="w-3.5 h-3.5" />
-          </button>
+          <Badge
+            :theme="isTotpExpiringSoon ? 'red' : 'gray'"
+            size="sm"
+            variant="solid"
+            :label="`${totpData?.remaining_seconds ?? 30}s`"
+          />
         </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <div class="font-mono text-xl font-bold tracking-widest text-ink-gray-9 select-all">
+            {{ formattedTotpCode }}
+          </div>
+          <Button
+            size="xs"
+            :variant="copiedField === 'totp' ? 'solid' : 'ghost'"
+            :theme="copiedField === 'totp' ? 'green' : 'gray'"
+            :icon="copiedField === 'totp' ? 'lucide-check' : 'lucide-copy'"
+            label="Copy TOTP Code"
+            tooltip="Copy TOTP Code"
+            @click.stop="handleCopy('totp')"
+          />
+        </div>
+
+        <!-- Progress using Frappe UI Progress component -->
+        <Progress :value="totpProgressPercent" size="sm" />
+      </div>
+
+      <!-- Credential Fields List (Modular SecretFieldRows) -->
+      <div class="bg-surface-base rounded-6 border border-outline-gray-2 divide-y divide-outline-gray-1 overflow-hidden shadow-elevation-1">
+        <!-- URL -->
+        <SecretFieldRow
+          v-if="secret.url"
+          label="Website URL"
+          :value="secret.url"
+          icon="lucide-globe"
+          is-link
+          :href="secret.url"
+          :is-copied="copiedField === 'url'"
+          @copy="handleCopy('url', secret.url)"
+        />
 
         <!-- Username / Email -->
-        <div v-if="secret.username || secret.email" class="p-3 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2 min-w-0 flex-1 pr-2">
-            <User class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            <div class="min-w-0">
-              <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Username</div>
-              <div class="font-medium text-slate-800 truncate select-all">
-                {{ secret.username || secret.email }}
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            @click="handleCopy(secret.username || secret.email, 'username')"
-            class="p-1.5 text-slate-400 hover:text-slate-700 rounded-md transition"
-          >
-            <Check v-if="copiedField === 'username'" class="w-3.5 h-3.5 text-emerald-600" />
-            <Copy v-else class="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <SecretFieldRow
+          v-if="secret.username || secret.email"
+          label="Username / Email"
+          :value="secret.username || secret.email"
+          icon="lucide-user"
+          :is-copied="copiedField === 'username'"
+          @copy="handleCopy('username', secret.username || secret.email)"
+        />
 
-        <!-- Password Field -->
-        <div v-if="secret.has_password || secret.secret_type === 'Password'" class="p-3 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2 min-w-0 flex-1 pr-2">
-            <KeyRound class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Password</span>
-                <span v-if="secret.password_strength" class="text-[10px] font-medium text-emerald-600">
-                  {{ secret.password_strength }}
-                </span>
-              </div>
-              <div class="font-mono font-medium text-slate-800 truncate select-all">
-                <span v-if="showPassword && secret.decrypted?.password">
-                  {{ secret.decrypted.password }}
-                </span>
-                <span v-else-if="isDecrypting" class="text-slate-400 text-xs italic">
-                  Decrypting...
-                </span>
-                <span v-else class="tracking-widest">
-                  ••••••••••••
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="flex items-center gap-1 flex-shrink-0">
-            <button
-              type="button"
-              @click="revealPassword"
-              title="Reveal / Hide"
-              class="p-1.5 text-slate-400 hover:text-slate-700 rounded-md transition"
-            >
-              <EyeOff v-if="showPassword" class="w-3.5 h-3.5" />
-              <Eye v-else class="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              @click="handleCopy(secret.decrypted?.password, 'password')"
-              title="Copy Password"
-              class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition"
-            >
-              <Check v-if="copiedField === 'password'" class="w-3.5 h-3.5 text-emerald-600" />
-              <Copy v-else class="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Live TOTP (2FA) Code -->
-        <div v-if="secret.has_totp" class="p-3 bg-blue-50/50 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2 min-w-0 flex-1 pr-2">
-            <Clock class="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-            <div>
-              <div class="text-[10px] text-blue-700 uppercase font-bold tracking-wider flex items-center gap-2">
-                <span>One-Time Password (2FA)</span>
-                <span class="text-[10px] font-mono font-semibold text-blue-600 bg-blue-100/80 px-1 rounded">
-                  {{ totpData?.remaining_seconds ?? 30 }}s
-                </span>
-              </div>
-              <div class="font-mono text-base font-bold text-blue-900 tracking-wider mt-0.5">
-                {{ totpData?.code || '••••••' }}
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            @click="handleCopy(totpData?.code, 'totp')"
-            title="Copy TOTP Code"
-            class="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition"
-          >
-            <Check v-if="copiedField === 'totp'" class="w-3.5 h-3.5 text-emerald-600" />
-            <Copy v-else class="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <!-- Password -->
+        <SecretFieldRow
+          v-if="secret.has_password || secret.secret_type === 'Password'"
+          label="Password"
+          :value="secret.decrypted?.password"
+          icon="lucide-key-round"
+          is-masked
+          can-reveal
+          :is-revealed="showPassword"
+          :loading="isDecrypting"
+          is-mono
+          :badge-label="secret.password_strength || undefined"
+          :badge-theme="secret.password_strength === 'strong' || secret.password_strength === 'excellent' ? 'green' : 'amber'"
+          :is-copied="copiedField === 'password'"
+          @toggle-reveal="toggleReveal('password')"
+          @copy="handleCopy('password')"
+        />
 
         <!-- API Key Specific -->
         <template v-if="secret.secret_type === 'API Key'">
-          <div v-if="secret.api_key" class="p-3 flex items-center justify-between text-xs">
-            <div class="min-w-0 flex-1 pr-2">
-              <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">API Key</div>
-              <div class="font-mono text-xs text-slate-800 truncate select-all">{{ secret.api_key }}</div>
-            </div>
-            <button type="button" @click="handleCopy(secret.api_key, 'api_key')" class="p-1.5 text-slate-400 hover:text-slate-700">
-              <Check v-if="copiedField === 'api_key'" class="w-3.5 h-3.5 text-emerald-600" />
-              <Copy v-else class="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <SecretFieldRow
+            v-if="secret.api_key"
+            label="API Key"
+            :value="secret.api_key"
+            icon="lucide-key"
+            is-mono
+            :is-copied="copiedField === 'api_key'"
+            @copy="handleCopy('api_key', secret.api_key)"
+          />
+          <SecretFieldRow
+            v-if="secret.has_api_secret || secret.decrypted?.api_secret"
+            label="API Secret"
+            :value="secret.decrypted?.api_secret"
+            icon="lucide-key-round"
+            is-masked
+            can-reveal
+            :is-revealed="showApiSecret"
+            :loading="isDecrypting"
+            is-mono
+            :is-copied="copiedField === 'api_secret'"
+            @toggle-reveal="toggleReveal('apiSecret')"
+            @copy="handleCopy('api_secret')"
+          />
         </template>
 
         <!-- Credit Card Specific -->
         <template v-if="secret.secret_type === 'Credit Card'">
-          <div v-if="secret.card_holder" class="p-3 text-xs">
-            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Card Holder</div>
-            <div class="font-medium text-slate-800">{{ secret.card_holder }}</div>
-          </div>
-          <div v-if="secret.card_expiry" class="p-3 text-xs">
-            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Expires</div>
-            <div class="font-medium text-slate-800">{{ secret.card_expiry }}</div>
+          <SecretFieldRow
+            v-if="secret.card_holder"
+            label="Cardholder Name"
+            :value="secret.card_holder"
+            icon="lucide-user"
+            :is-copied="copiedField === 'card_holder'"
+            @copy="handleCopy('card_holder', secret.card_holder)"
+          />
+          <SecretFieldRow
+            v-if="secret.has_card_number || secret.decrypted?.card_number"
+            label="Card Number"
+            :value="secret.decrypted?.card_number"
+            icon="lucide-credit-card"
+            is-masked
+            can-reveal
+            :is-revealed="showCardNumber"
+            :loading="isDecrypting"
+            is-mono
+            :is-copied="copiedField === 'card_number'"
+            @toggle-reveal="toggleReveal('cardNumber')"
+            @copy="handleCopy('card_number')"
+          />
+          <SecretFieldRow
+            v-if="secret.card_expiry"
+            label="Expires (MM/YY)"
+            :value="secret.card_expiry"
+            :is-copied="copiedField === 'card_expiry'"
+            @copy="handleCopy('card_expiry', secret.card_expiry)"
+          />
+          <SecretFieldRow
+            v-if="secret.has_card_cvv || secret.decrypted?.card_cvv"
+            label="CVV"
+            :value="secret.decrypted?.card_cvv"
+            icon="lucide-key-round"
+            is-masked
+            can-reveal
+            :is-revealed="showCardCvv"
+            :loading="isDecrypting"
+            is-mono
+            :is-copied="copiedField === 'card_cvv'"
+            @toggle-reveal="toggleReveal('cardCvv')"
+            @copy="handleCopy('card_cvv')"
+          />
+        </template>
+
+        <!-- Database Specific -->
+        <template v-if="secret.secret_type === 'Database'">
+          <SecretFieldRow
+            v-if="secret.db_host"
+            label="Host & Port"
+            :value="`${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`"
+            icon="lucide-database"
+            is-mono
+            :is-copied="copiedField === 'db_host'"
+            @copy="handleCopy('db_host', `${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`)"
+          />
+          <SecretFieldRow
+            v-if="secret.db_name"
+            label="Database Name"
+            :value="secret.db_name"
+            is-mono
+            :is-copied="copiedField === 'db_name'"
+            @copy="handleCopy('db_name', secret.db_name)"
+          />
+          <SecretFieldRow
+            v-if="secret.username"
+            label="Database User"
+            :value="secret.username"
+            icon="lucide-user"
+            is-mono
+            :is-copied="copiedField === 'username'"
+            @copy="handleCopy('username', secret.username)"
+          />
+          <SecretFieldRow
+            v-if="secret.has_db_password || secret.decrypted?.db_password"
+            label="Database Password"
+            :value="secret.decrypted?.db_password"
+            icon="lucide-key-round"
+            is-masked
+            can-reveal
+            :is-revealed="showDbPassword"
+            :loading="isDecrypting"
+            is-mono
+            :is-copied="copiedField === 'db_password'"
+            @toggle-reveal="toggleReveal('dbPassword')"
+            @copy="handleCopy('db_password')"
+          />
+        </template>
+
+        <!-- SSH Key Specific -->
+        <template v-if="secret.secret_type === 'SSH Key'">
+          <div class="p-2.5 text-xs">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <Icon icon="lucide-terminal" class="size-3.5 text-ink-gray-4" />
+                <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider">SSH Private Key</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <Button size="xs" variant="ghost" :label="showSshKey ? 'Hide' : 'Reveal'" @click="toggleReveal('sshKey')" />
+                <Button
+                  size="xs"
+                  :variant="copiedField === 'ssh_private_key' ? 'solid' : 'ghost'"
+                  :theme="copiedField === 'ssh_private_key' ? 'green' : 'gray'"
+                  :icon="copiedField === 'ssh_private_key' ? 'lucide-check' : 'lucide-copy'"
+                  label="Copy SSH Key"
+                  tooltip="Copy SSH Key"
+                  @click="handleCopy('ssh_private_key')"
+                />
+              </div>
+            </div>
+            <div class="bg-surface-gray-2 p-2 rounded-3 border border-outline-gray-1 font-mono text-[11px] text-ink-gray-9 max-h-24 overflow-y-auto whitespace-pre select-all">
+              <span v-if="showSshKey">{{ secret.decrypted?.ssh_private_key || secret.ssh_private_key || 'No key content' }}</span>
+              <span v-else class="text-ink-gray-4 italic">•••••••••••• (hidden)</span>
+            </div>
           </div>
         </template>
 
         <!-- Notes -->
-        <div v-if="secret.notes" class="p-3 text-xs">
-          <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Notes</div>
-          <div class="text-slate-700 whitespace-pre-wrap text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
+        <div v-if="secret.notes" class="p-2.5 text-xs">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-1.5">
+              <Icon icon="lucide-file-text" class="size-3.5 text-ink-gray-4" />
+              <span class="text-[10px] text-ink-gray-5 uppercase font-bold tracking-wider">Notes</span>
+            </div>
+            <Button
+              size="xs"
+              variant="ghost"
+              :icon="copiedField === 'notes' ? 'lucide-check' : 'lucide-copy'"
+              :theme="copiedField === 'notes' ? 'green' : 'gray'"
+              label="Copy Notes"
+              tooltip="Copy Notes"
+              @click="handleCopy('notes', secret.notes)"
+            />
+          </div>
+          <div class="text-ink-gray-8 whitespace-pre-wrap text-xs bg-surface-gray-2 p-2 rounded-3 border border-outline-gray-1 max-h-32 overflow-y-auto select-all">
             {{ secret.notes }}
           </div>
         </div>
       </div>
 
       <!-- Metadata footer -->
-      <div class="text-[11px] text-slate-400 px-1 flex items-center justify-between">
+      <div class="text-[10px] text-ink-gray-4 px-1 flex items-center justify-between">
         <span>ID: {{ secret.name }}</span>
         <span>Updated {{ formatRelativeTime(secret.modified) }}</span>
       </div>
     </div>
+
+    <!-- Delete Confirmation using Frappe UI Dialog component -->
+    <Dialog
+      v-model="showDeleteConfirm"
+      title="Delete Secret"
+      :message="`Are you sure you want to permanently delete '${secret?.title}'? This action cannot be undone.`"
+      theme="red"
+      size="xs"
+      :actions="[
+        {
+          label: 'Delete',
+          theme: 'red',
+          variant: 'solid',
+          loading: isDeleting,
+          onClick: () => handleDelete(),
+        },
+      ]"
+    />
   </div>
 </template>

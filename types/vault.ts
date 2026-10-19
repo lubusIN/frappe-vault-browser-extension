@@ -52,6 +52,10 @@ export interface VaultSecretDetail extends VaultSecretSummary {
   shared_by?: string | null;
   decrypted?: DecryptedData;
   expires_on?: string | null;
+  has_api_secret?: boolean;
+  has_card_number?: boolean;
+  has_card_cvv?: boolean;
+  has_db_password?: boolean;
 }
 
 export interface TotpResult {

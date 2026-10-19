@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { Spinner } from 'frappe-ui';
 import { useVaultAuth } from '../../composables/useVaultAuth';
 import ConnectView from '../../components/ConnectView.vue';
 import SecretsListView from '../../components/SecretsListView.vue';
@@ -41,14 +42,19 @@ function handleSecretCreated(secretName: string) {
   selectedSecretName.value = secretName;
   currentScreen.value = 'detail';
 }
+
+function handleSecretDeleted(_secretName: string) {
+  selectedSecretName.value = '';
+  currentScreen.value = 'list';
+}
 </script>
 
 <template>
-  <main class="w-[380px] h-[560px] max-h-[560px] bg-slate-50 flex flex-col font-sans select-none overflow-hidden">
+  <main class="w-[380px] h-[560px] max-h-[560px] bg-surface-gray-2 text-ink-gray-9 flex flex-col font-sans select-none overflow-hidden">
     <!-- Initial App Loading State -->
-    <div v-if="isAuthLoading && !authState" class="flex-1 flex flex-col items-center justify-center p-6 text-slate-400 text-xs gap-3">
-      <div class="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      <span class="font-medium text-slate-500">Checking Frappe Vault...</span>
+    <div v-if="isAuthLoading && !authState" class="flex-1 flex flex-col items-center justify-center p-6 text-ink-gray-5 text-xs gap-3">
+      <Spinner size="lg" />
+      <span class="font-medium text-ink-gray-7">Checking Frappe Vault...</span>
     </div>
 
     <!-- Screen 1: Connect / Login Screen -->
@@ -56,27 +62,33 @@ function handleSecretCreated(secretName: string) {
 
     <!-- Screen 2: Authenticated Vault Screens -->
     <template v-else>
-      <!-- List View -->
-      <SecretsListView
-        v-if="currentScreen === 'list'"
-        @select="handleSelectSecret"
-        @new-secret="handleOpenNewSecret"
-        @open-generator="showGeneratorModal = true"
-        @open-settings="currentScreen = 'settings'"
-      />
+      <Transition name="fade" mode="out-in">
+        <!-- List View -->
+        <SecretsListView
+          v-if="currentScreen === 'list'"
+          key="list"
+          @select="handleSelectSecret"
+          @new-secret="handleOpenNewSecret"
+          @open-generator="showGeneratorModal = true"
+          @open-settings="currentScreen = 'settings'"
+        />
 
-      <!-- Detail View -->
-      <SecretDetailView
-        v-else-if="currentScreen === 'detail'"
-        :secret-name="selectedSecretName"
-        @back="currentScreen = 'list'"
-      />
+        <!-- Detail View -->
+        <SecretDetailView
+          v-else-if="currentScreen === 'detail'"
+          key="detail"
+          :secret-name="selectedSecretName"
+          @back="currentScreen = 'list'"
+          @deleted="handleSecretDeleted"
+        />
 
-      <!-- Settings View -->
-      <SettingsView
-        v-else-if="currentScreen === 'settings'"
-        @back="currentScreen = 'list'"
-      />
+        <!-- Settings View -->
+        <SettingsView
+          v-else-if="currentScreen === 'settings'"
+          key="settings"
+          @back="currentScreen = 'list'"
+        />
+      </Transition>
 
       <!-- New Secret Modal -->
       <NewSecretModal

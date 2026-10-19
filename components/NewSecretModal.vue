@@ -1,21 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useVaultApi } from '../composables/useVaultApi';
 import { useActiveTab } from '../composables/useActiveTab';
 import type { SecretType, VaultFolder } from '../types/vault';
 import PasswordGeneratorModal from './PasswordGeneratorModal.vue';
-import {
-  X,
-  Plus,
-  KeyRound,
-  Wand2,
-  Eye,
-  EyeOff,
-  Folder,
-  Globe,
-  User,
-  AlertCircle,
-} from '@lucide/vue';
+import { Button, TextInput, Textarea, Password, ErrorMessage, Select, Icon } from 'frappe-ui';
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -32,9 +21,22 @@ const { activeTab } = useActiveTab();
 
 const isSubmitting = ref(false);
 const errorMessage = ref<string | null>(null);
-const showPassword = ref(false);
 const showGeneratorModal = ref(false);
 const folders = ref<VaultFolder[]>([]);
+
+const secretTypeOptions = [
+  { label: 'Password / Login', value: 'Password' },
+  { label: 'API Key', value: 'API Key' },
+  { label: 'Secure Note', value: 'Note' },
+  { label: 'Credit Card', value: 'Credit Card' },
+  { label: 'Database Credentials', value: 'Database' },
+  { label: 'SSH Key', value: 'SSH Key' },
+];
+
+const folderOptions = computed(() => [
+  { label: '(No folder)', value: '' },
+  ...folders.value.map(f => ({ label: f.folder_name, value: f.name })),
+]);
 
 const form = reactive({
   title: props.initialTitle || activeTab.value?.title || activeTab.value?.domain || '',
@@ -44,23 +46,50 @@ const form = reactive({
   password: '',
   folder: '',
   notes: '',
-  // Specific fields
+  // API Key fields
   api_key: '',
   api_secret: '',
+  // Credit Card fields
   card_holder: '',
   card_number: '',
   card_expiry: '',
   card_cvv: '',
+  // Database fields
+  db_host: '',
+  db_port: '',
+  db_name: '',
+  db_password: '',
+  // SSH Key
+  ssh_private_key: '',
 });
 
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    if (showGeneratorModal.value) {
+      showGeneratorModal.value = false;
+    } else {
+      emit('close');
+    }
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('keydown', handleKeydown);
   try {
     folders.value = await getFolders();
   } catch {}
 });
 
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
+});
+
 function handlePasswordSelected(pwd: string) {
-  form.password = pwd;
+  if (form.secret_type === 'Database') {
+    form.db_password = pwd;
+  } else {
+    form.password = pwd;
+  }
 }
 
 async function handleSubmit() {
@@ -92,6 +121,14 @@ async function handleSubmit() {
       payload.card_number = form.card_number;
       payload.card_expiry = form.card_expiry;
       payload.card_cvv = form.card_cvv;
+    } else if (form.secret_type === 'Database') {
+      payload.db_host = form.db_host;
+      payload.db_port = form.db_port ? parseInt(form.db_port, 10) : undefined;
+      payload.db_name = form.db_name;
+      payload.username = form.username;
+      payload.db_password = form.db_password;
+    } else if (form.secret_type === 'SSH Key') {
+      payload.ssh_private_key = form.ssh_private_key;
     }
 
     const res = await createSecret(payload);
@@ -107,211 +144,266 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs flex flex-col justify-end sm:justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl border border-slate-200 w-full h-[90%] max-h-[520px] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
-      <!-- Modal Header -->
-      <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-        <h2 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-          <Plus class="w-4 h-4 text-blue-600" />
+  <div
+    class="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs flex flex-col justify-end sm:justify-center p-0 sm:p-4"
+    @click.self="emit('close')"
+  >
+    <div class="bg-surface-base rounded-t-6 sm:rounded-6 shadow-elevation-3 border border-outline-gray-2 w-full h-[90%] max-h-[520px] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200">
+      <!-- Modal Header (Espresso Appbar) -->
+      <div class="px-4 py-3 border-b border-outline-gray-2 flex items-center justify-between">
+        <h2 class="text-xs font-bold text-ink-gray-9 flex items-center gap-1.5">
+          <Icon icon="lucide-plus" class="size-4 text-ink-gray-7" />
           Add New Secret
         </h2>
-        <button
-          type="button"
+        <Button
+          icon="lucide-x"
+          size="xs"
+          variant="ghost"
+          label="Close"
+          tooltip="Close"
           @click="emit('close')"
-          class="text-slate-400 hover:text-slate-600 p-1 rounded-md"
-        >
-          <X class="w-4 h-4" />
-        </button>
+        />
       </div>
 
       <!-- Modal Body -->
-      <div class="flex-1 p-4 overflow-y-auto space-y-3.5 text-xs">
-        <!-- Error Alert -->
-        <div v-if="errorMessage" class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2 text-rose-700">
-          <AlertCircle class="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
-          <span>{{ errorMessage }}</span>
-        </div>
+      <div class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+        <!-- Error Alert using Frappe UI ErrorMessage -->
+        <ErrorMessage
+          v-if="errorMessage"
+          :message="errorMessage"
+          class="p-2.5 rounded-4 bg-surface-gray-2 border border-outline-gray-3 text-xs"
+        />
 
         <!-- Secret Type -->
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">Secret Type</label>
-          <select
-            v-model="form.secret_type"
-            class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Password">Password / Login</option>
-            <option value="API Key">API Key</option>
-            <option value="Note">Secure Note</option>
-            <option value="Credit Card">Credit Card</option>
-            <option value="Database">Database Credentials</option>
-            <option value="SSH Key">SSH Key</option>
-          </select>
-        </div>
+        <Select
+          v-model="form.secret_type"
+          label="Secret Type"
+          :options="secretTypeOptions"
+          size="sm"
+          variant="outline"
+        />
 
         <!-- Title -->
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">Title *</label>
-          <input
-            v-model="form.title"
-            type="text"
-            placeholder="e.g. GitHub, Google Account"
-            required
-            class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <TextInput
+          v-model="form.title"
+          label="Title"
+          required
+          type="text"
+          placeholder="e.g. GitHub, Google Account"
+          size="sm"
+          variant="outline"
+        />
 
-        <!-- URL -->
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
-            <Globe class="w-3.5 h-3.5 text-slate-400" />
-            Website URL
-          </label>
-          <input
-            v-model="form.url"
-            type="text"
-            placeholder="https://example.com/login"
-            class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <!-- URL (for relevant types) -->
+        <TextInput
+          v-if="['Password', 'API Key'].includes(form.secret_type)"
+          v-model="form.url"
+          label="Website URL"
+          type="text"
+          placeholder="https://example.com/login"
+          size="sm"
+          variant="outline"
+        >
+          <template #prefix>
+            <Icon icon="lucide-globe" class="size-3.5 text-ink-gray-4" />
+          </template>
+        </TextInput>
 
         <!-- Password Type Specific Fields -->
         <template v-if="form.secret_type === 'Password'">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
-              <User class="w-3.5 h-3.5 text-slate-400" />
-              Username or Email
-            </label>
-            <input
-              v-model="form.username"
-              type="text"
-              placeholder="user@example.com"
-              class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <TextInput
+            v-model="form.username"
+            label="Username or Email"
+            type="text"
+            placeholder="user@example.com"
+            size="sm"
+            variant="outline"
+          >
+            <template #prefix>
+              <Icon icon="lucide-user" class="size-3.5 text-ink-gray-4" />
+            </template>
+          </TextInput>
 
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="font-semibold text-slate-700 flex items-center gap-1">
-                <KeyRound class="w-3.5 h-3.5 text-slate-400" />
-                Password
-              </label>
-              <button
-                type="button"
-                @click="showGeneratorModal = true"
-                class="text-[11px] text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-              >
-                <Wand2 class="w-3 h-3" />
-                Generate
-              </button>
-            </div>
-            <div class="relative">
-              <input
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="••••••••••••"
-                class="w-full pl-2.5 pr-8 py-1.5 rounded-lg border border-slate-300 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
-              >
-                <EyeOff v-if="showPassword" class="w-3.5 h-3.5" />
-                <Eye v-else class="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+          <Password
+            v-model="form.password"
+            placeholder="••••••••••••"
+            size="sm"
+            variant="outline"
+            class="font-mono"
+          >
+            <template #label>
+              <div class="flex items-center justify-between w-full">
+                <span class="font-semibold text-ink-gray-7">Password</span>
+                <Button
+                  icon-left="lucide-wand-2"
+                  label="Generate"
+                  size="xs"
+                  variant="ghost"
+                  @click="showGeneratorModal = true"
+                />
+              </div>
+            </template>
+          </Password>
         </template>
 
         <!-- API Key Specific Fields -->
         <template v-else-if="form.secret_type === 'API Key'">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">API Key</label>
-            <input
-              v-model="form.api_key"
-              type="text"
-              class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono"
-            />
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">API Secret</label>
-            <input
-              v-model="form.api_secret"
-              type="password"
-              class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono"
-            />
-          </div>
+          <TextInput
+            v-model="form.api_key"
+            label="API Key"
+            type="text"
+            size="sm"
+            variant="outline"
+            class="font-mono"
+          />
+          <Password
+            v-model="form.api_secret"
+            label="API Secret"
+            placeholder="••••••••••••"
+            size="sm"
+            variant="outline"
+            class="font-mono"
+          />
         </template>
 
         <!-- Credit Card Fields -->
         <template v-else-if="form.secret_type === 'Credit Card'">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Card Holder</label>
-            <input v-model="form.card_holder" type="text" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300" />
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Card Number</label>
-            <input v-model="form.card_number" type="text" placeholder="•••• •••• •••• ••••" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono" />
-          </div>
+          <TextInput
+            v-model="form.card_holder"
+            label="Cardholder Name"
+            type="text"
+            size="sm"
+            variant="outline"
+          />
+          <TextInput
+            v-model="form.card_number"
+            label="Card Number"
+            type="text"
+            placeholder="•••• •••• •••• ••••"
+            size="sm"
+            variant="outline"
+            class="font-mono"
+          />
           <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">Expiry (MM/YY)</label>
-              <input v-model="form.card_expiry" type="text" placeholder="12/28" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300" />
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">CVV</label>
-              <input v-model="form.card_cvv" type="password" placeholder="•••" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono" />
-            </div>
+            <TextInput
+              v-model="form.card_expiry"
+              label="Expiry (MM/YY)"
+              type="text"
+              placeholder="12/28"
+              size="sm"
+              variant="outline"
+            />
+            <Password
+              v-model="form.card_cvv"
+              label="CVV"
+              placeholder="•••"
+              size="sm"
+              variant="outline"
+              class="font-mono"
+            />
           </div>
         </template>
 
+        <!-- Database Fields -->
+        <template v-else-if="form.secret_type === 'Database'">
+          <div class="grid grid-cols-3 gap-2">
+            <TextInput
+              v-model="form.db_host"
+              label="Host"
+              type="text"
+              placeholder="localhost"
+              size="sm"
+              variant="outline"
+              class="col-span-2"
+            />
+            <TextInput
+              v-model="form.db_port"
+              label="Port"
+              type="text"
+              placeholder="5432"
+              size="sm"
+              variant="outline"
+            />
+          </div>
+          <TextInput
+            v-model="form.db_name"
+            label="Database Name"
+            type="text"
+            size="sm"
+            variant="outline"
+          />
+          <TextInput
+            v-model="form.username"
+            label="Username"
+            type="text"
+            size="sm"
+            variant="outline"
+          />
+          <Password
+            v-model="form.db_password"
+            label="Password"
+            placeholder="••••••••••••"
+            size="sm"
+            variant="outline"
+            class="font-mono"
+          />
+        </template>
+
+        <!-- SSH Key Fields -->
+        <template v-else-if="form.secret_type === 'SSH Key'">
+          <Textarea
+            v-model="form.ssh_private_key"
+            label="SSH Private Key"
+            :rows="4"
+            placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."
+            size="sm"
+            variant="outline"
+            class="font-mono text-[11px]"
+          />
+        </template>
+
         <!-- Folder Selection -->
-        <div v-if="folders.length > 0">
-          <label class="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
-            <Folder class="w-3.5 h-3.5 text-slate-400" />
-            Folder
-          </label>
-          <select
-            v-model="form.folder"
-            class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">(No folder)</option>
-            <option v-for="f in folders" :key="f.name" :value="f.name">
-              {{ f.folder_name }}
-            </option>
-          </select>
-        </div>
+        <Select
+          v-if="folders.length > 0"
+          v-model="form.folder"
+          label="Folder"
+          :options="folderOptions"
+          size="sm"
+          variant="outline"
+        />
 
         <!-- Notes -->
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">Notes</label>
-          <textarea
-            v-model="form.notes"
-            rows="2"
-            placeholder="Additional secure notes..."
-            class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          ></textarea>
-        </div>
+        <Textarea
+          v-model="form.notes"
+          label="Notes"
+          :rows="2"
+          placeholder="Additional secure notes..."
+          size="sm"
+          variant="outline"
+        />
       </div>
 
-      <!-- Footer Actions -->
-      <div class="p-3 border-t border-slate-100 flex gap-2">
-        <button
-          type="button"
+      <!-- Footer Actions (Espresso button group) -->
+      <div class="p-3 border-t border-outline-gray-2 flex gap-2">
+        <Button
+          class="flex-1 justify-center"
+          size="sm"
+          variant="subtle"
+          theme="gray"
           @click="emit('close')"
-          class="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
         >
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          class="flex-1 justify-center"
+          size="sm"
+          variant="solid"
+          :loading="isSubmitting"
+          loading-text="Saving..."
           @click="handleSubmit"
-          :disabled="isSubmitting"
-          class="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5"
         >
-          <span v-if="isSubmitting" class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-          <span>{{ isSubmitting ? 'Saving...' : 'Save Secret' }}</span>
-        </button>
+          Save Secret
+        </Button>
       </div>
     </div>
 

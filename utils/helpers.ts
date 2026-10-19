@@ -166,15 +166,49 @@ function cryptoRandomInt(max: number): number {
   return (array[0] ?? 0) % max;
 }
 
+let clearTimer: any = null;
+
 /**
- * Copy text to clipboard with navigator.clipboard
+ * Copy text to clipboard with navigator.clipboard and optional auto-clear timer.
  */
-export async function copyText(text: string): Promise<boolean> {
+export async function copyText(text: string, clearAfterSeconds?: number): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
+
+    if (clearAfterSeconds && clearAfterSeconds > 0) {
+      if (clearTimer) clearTimeout(clearTimer);
+      clearTimer = setTimeout(async () => {
+        try {
+          const current = await navigator.clipboard.readText();
+          if (current === text) {
+            await navigator.clipboard.writeText('');
+          }
+        } catch {
+          // Ignore silently if read permission not available
+        }
+      }, clearAfterSeconds * 1000);
+    }
+
     return true;
   } catch (err) {
     console.error('Clipboard write error:', err);
     return false;
+  }
+}
+
+/**
+ * Open external URL safely in a new browser tab.
+ */
+export function openExternalUrl(url?: string | null): void {
+  if (!url || url === '#') return;
+  const fullUrl = url.includes('://') ? url : `https://${url}`;
+  
+  const g = globalThis as any;
+  if (g.browser?.tabs?.create) {
+    g.browser.tabs.create({ url: fullUrl });
+  } else if (g.chrome?.tabs?.create) {
+    g.chrome.tabs.create({ url: fullUrl });
+  } else if (typeof window !== 'undefined') {
+    window.open(fullUrl, '_blank', 'noopener,noreferrer');
   }
 }

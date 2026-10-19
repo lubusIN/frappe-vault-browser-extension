@@ -15,7 +15,6 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "@lucide/vue": "^1.59.0",
     "frappe-ui": "^1.0.2",
     "vue": "^3.5.29"
   },

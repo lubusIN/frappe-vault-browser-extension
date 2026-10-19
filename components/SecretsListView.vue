@@ -5,20 +5,7 @@ import { useActiveTab } from '../composables/useActiveTab';
 import type { VaultSecretSummary } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
 import { matchesDomain, copyText } from '../utils/helpers';
-import {
-  Search,
-  Plus,
-  Wand2,
-  Settings,
-  Star,
-  RefreshCw,
-  Copy,
-  Check,
-  Zap,
-  Globe,
-  Folder,
-  X,
-} from '@lucide/vue';
+import { Button, TextInput, Badge, Spinner, TabButtons, Icon } from 'frappe-ui';
 
 const emit = defineEmits<{
   (e: 'select', secretName: string): void;
@@ -40,6 +27,11 @@ const copiedSecretName = ref<string | null>(null);
 const autofilledSecretName = ref<string | null>(null);
 
 const secretTypes = ['All', 'Password', 'API Key', 'Note', 'Credit Card', 'Database'];
+
+const viewFilterOptions = [
+  { label: 'All Items', value: 'all' },
+  { label: 'Starred', value: 'bookmarks', iconLeft: 'lucide-star' },
+];
 
 async function fetchVaultSecrets() {
   isLoading.value = true;
@@ -96,7 +88,7 @@ async function handleQuickCopyPassword(secret: VaultSecretSummary, event: Event)
     const full = await decryptSecret(secret.name);
     const pwd = full.decrypted?.password || full.decrypted?.api_secret || full.decrypted?.card_number;
     if (pwd) {
-      await copyText(pwd);
+      await copyText(pwd, 30);
       copiedSecretName.value = secret.name;
       setTimeout(() => {
         if (copiedSecretName.value === secret.name) {
@@ -146,112 +138,102 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-slate-50 text-slate-800">
-    <!-- Top Action Header -->
-    <div class="px-3.5 py-2.5 bg-white border-b border-slate-200/80 flex items-center justify-between flex-shrink-0">
+  <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
+    <!-- Top Action Header (Espresso Appbar) -->
+    <div class="px-3.5 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-2">
-        <div class="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-xs">
-          V
+        <div class="w-6 h-6 bg-surface-gray-10 text-ink-base rounded-3 flex items-center justify-center shadow-xs">
+          <Icon icon="lucide-shield" class="size-3.5" />
         </div>
-        <span class="text-xs font-bold text-slate-900">Frappe Vault</span>
+        <span class="text-xs font-bold tracking-tight text-ink-gray-9">Frappe Vault</span>
       </div>
 
       <div class="flex items-center gap-1">
-        <button
-          type="button"
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="lucide-wand-2"
+          label="Password Generator"
+          tooltip="Password Generator"
           @click="emit('open-generator')"
-          title="Password Generator"
-          class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-        >
-          <Wand2 class="w-4 h-4" />
-        </button>
-        <button
-          type="button"
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="lucide-plus"
+          label="Add New Secret"
+          tooltip="Add New Secret"
           @click="emit('new-secret')"
-          title="Add New Secret"
-          class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-        >
-          <Plus class="w-4 h-4" />
-        </button>
-        <button
-          type="button"
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="lucide-settings"
+          label="Settings"
+          tooltip="Settings"
           @click="emit('open-settings')"
-          title="Settings"
-          class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-        >
-          <Settings class="w-4 h-4" />
-        </button>
+        />
       </div>
     </div>
 
     <!-- Search & Filter Controls -->
-    <div class="px-3 py-2 bg-white border-b border-slate-200/80 space-y-2 flex-shrink-0">
-      <!-- Search Input -->
-      <div class="relative">
-        <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
-          <Search class="w-3.5 h-3.5" />
-        </span>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search secrets..."
-          class="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-        />
-        <button
-          v-if="searchQuery"
-          type="button"
-          @click="searchQuery = ''"
-          class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600"
-        >
-          <X class="w-3.5 h-3.5" />
-        </button>
-      </div>
+    <div class="px-3 py-2 bg-surface-base border-b border-outline-gray-2 space-y-2 flex-shrink-0">
+      <!-- Search Input using Frappe UI TextInput -->
+      <TextInput
+        v-model="searchQuery"
+        type="text"
+        placeholder="Search secrets..."
+        size="sm"
+        variant="subtle"
+      >
+        <template #prefix>
+          <Icon icon="lucide-search" class="size-3.5 text-ink-gray-4" />
+        </template>
+        <template #suffix>
+          <Button
+            v-if="searchQuery"
+            size="xs"
+            variant="ghost"
+            icon="lucide-x"
+            label="Clear search"
+            tooltip="Clear search"
+            @click="searchQuery = ''"
+          />
+        </template>
+      </TextInput>
 
-      <!-- Tab View (All vs Bookmarks) & Type Filter Pills -->
+      <!-- View Selector (All vs Starred) & Refresh using Frappe UI TabButtons -->
       <div class="flex items-center justify-between gap-2 text-xs">
-        <div class="flex items-center bg-slate-100 p-0.5 rounded-lg text-[11px] font-medium">
-          <button
-            type="button"
-            class="px-2.5 py-1 rounded-md transition"
-            :class="activeTabFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
-            @click="activeTabFilter = 'all'"
-          >
-            All Items
-          </button>
-          <button
-            type="button"
-            class="px-2.5 py-1 rounded-md transition flex items-center gap-1"
-            :class="activeTabFilter === 'bookmarks' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'"
-            @click="activeTabFilter = 'bookmarks'"
-          >
-            <Star class="w-3 h-3 text-amber-500 fill-amber-400" />
-            <span>Starred</span>
-          </button>
-        </div>
+        <TabButtons
+          v-model="activeTabFilter"
+          :options="viewFilterOptions"
+          variant="subtle"
+          size="sm"
+        />
 
         <!-- Refresh button -->
-        <button
-          type="button"
+        <Button
+          size="xs"
+          variant="ghost"
+          icon="lucide-refresh-cw"
+          :loading="isLoading"
+          label="Refresh Vault"
+          tooltip="Refresh Vault"
           @click="fetchVaultSecrets"
-          title="Refresh Vault"
-          class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition"
-        >
-          <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
-        </button>
+        />
       </div>
 
-      <!-- Type Pill Badges (Horizontal scroll) -->
-      <div class="flex gap-1 overflow-x-auto pb-0.5 no-scrollbar text-[11px]">
-        <button
+      <!-- Type Pill Badges (Espresso subtle buttons) -->
+      <div class="flex gap-1 overflow-x-auto pb-0.5 no-scrollbar text-xs">
+        <Button
           v-for="st in secretTypes"
           :key="st"
-          type="button"
+          size="xs"
+          :variant="selectedType === st ? 'solid' : 'subtle'"
+          :label="st"
           @click="selectedType = st"
-          class="px-2 py-0.5 rounded-full border transition whitespace-nowrap"
-          :class="selectedType === st ? 'bg-blue-50 border-blue-200 text-blue-700 font-semibold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"
-        >
-          {{ st }}
-        </button>
+          class="whitespace-nowrap"
+        />
       </div>
     </div>
 
@@ -260,16 +242,18 @@ onMounted(() => {
       <!-- Active Tab Matching Section -->
       <div
         v-if="activeTab?.domain && !searchQuery && activeTabFilter === 'all'"
-        class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-2.5 shadow-xs space-y-2"
+        class="bg-surface-base border border-outline-gray-2 rounded-4 p-2.5 shadow-elevation-1 space-y-2"
       >
         <div class="flex items-center justify-between text-xs">
-          <div class="flex items-center gap-1.5 font-bold text-blue-900">
-            <Globe class="w-3.5 h-3.5 text-blue-600" />
+          <div class="flex items-center gap-1.5 font-semibold text-ink-gray-9 min-w-0">
+            <Icon icon="lucide-globe" class="size-3.5 text-ink-gray-7 flex-shrink-0" />
             <span class="truncate">{{ activeTab.domain }}</span>
           </div>
-          <span class="text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-1.5 py-0.5 rounded-full">
-            {{ matchingSecrets.length }} found
-          </span>
+          <Badge
+            size="sm"
+            variant="subtle"
+            :label="`${matchingSecrets.length} found`"
+          />
         </div>
 
         <!-- Matching items list -->
@@ -278,101 +262,118 @@ onMounted(() => {
             v-for="s in matchingSecrets"
             :key="'match-' + s.name"
             @click="emit('select', s.name)"
-            class="bg-white hover:bg-slate-50 border border-blue-100 rounded-lg p-2 flex items-center justify-between cursor-pointer transition shadow-2xs"
+            class="bg-surface-gray-2 hover:bg-surface-gray-3 border border-outline-gray-1 rounded-3 p-2 flex items-center justify-between cursor-pointer transition"
           >
             <div class="flex items-center gap-2 min-w-0 flex-1 pr-2">
               <SecretTypeIcon :type="s.secret_type" size="sm" />
               <div class="min-w-0">
-                <div class="text-xs font-semibold text-slate-900 truncate">{{ s.title }}</div>
-                <div class="text-[10px] text-slate-500 truncate">{{ s.username || s.email || 'No username' }}</div>
+                <div class="text-xs font-semibold text-ink-gray-9 truncate">{{ s.title }}</div>
+                <div class="text-[11px] text-ink-gray-5 truncate">{{ s.username || s.email || 'No username' }}</div>
               </div>
             </div>
 
-            <!-- Quick Action: Autofill & Copy -->
-            <div class="flex items-center gap-1 flex-shrink-0">
-              <button
-                type="button"
+            <!-- Quick Action: Autofill & Copy using Frappe UI Button -->
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <Button
+                size="xs"
+                variant="solid"
+                :icon-left="autofilledSecretName === s.name ? 'lucide-check' : 'lucide-zap'"
+                :label="autofilledSecretName === s.name ? 'Filled' : 'Fill'"
+                tooltip="Autofill on page"
                 @click="handleQuickAutofill(s, $event)"
-                title="Autofill on page"
-                class="p-1 rounded text-blue-600 hover:bg-blue-50 transition"
-              >
-                <Check v-if="autofilledSecretName === s.name" class="w-3.5 h-3.5 text-emerald-600" />
-                <Zap v-else class="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
+              />
+              <Button
+                size="xs"
+                variant="ghost"
+                :icon="copiedSecretName === s.name ? 'lucide-check' : 'lucide-copy'"
+                :theme="copiedSecretName === s.name ? 'green' : 'gray'"
+                :label="copiedSecretName === s.name ? 'Copied' : 'Copy Password'"
+                tooltip="Copy Password"
                 @click="handleQuickCopyPassword(s, $event)"
-                title="Copy Password"
-                class="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-              >
-                <Check v-if="copiedSecretName === s.name" class="w-3.5 h-3.5 text-emerald-600" />
-                <Copy v-else class="w-3.5 h-3.5" />
-              </button>
+              />
             </div>
           </div>
         </div>
 
         <!-- No matching items for active tab -->
         <div v-else class="text-center py-2">
-          <p class="text-[11px] text-blue-800/80 mb-1.5">No vault items for this site yet</p>
-          <button
-            type="button"
+          <p class="text-[11px] text-ink-gray-5 mb-1.5">No vault items for this site yet</p>
+          <Button
+            size="xs"
+            variant="subtle"
+            icon-left="lucide-plus"
+            :label="`Add secret for ${activeTab.domain}`"
             @click="handleAddForCurrentTab"
-            class="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-blue-100/50 border border-blue-200 text-blue-700 rounded-md text-[11px] font-semibold transition"
-          >
-            <Plus class="w-3 h-3" />
-            <span>Add secret for {{ activeTab.domain }}</span>
-          </button>
+          />
         </div>
       </div>
 
       <!-- Main Vault Secrets List -->
       <div>
-        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1.5 flex items-center justify-between">
+        <div class="text-[11px] font-bold text-ink-gray-5 px-1 mb-1.5 flex items-center justify-between">
           <span>{{ activeTabFilter === 'bookmarks' ? 'Starred Secrets' : 'Vault Secrets' }}</span>
           <span>{{ filteredSecrets.length }}</span>
         </div>
 
         <!-- Loading State -->
-        <div v-if="isLoading" class="py-12 flex flex-col items-center justify-center text-slate-400 text-xs gap-2">
-          <div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div v-if="isLoading" class="py-12 flex flex-col items-center justify-center text-ink-gray-5 text-xs gap-2">
+          <Spinner size="md" />
           <span>Loading vault...</span>
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="filteredSecrets.length === 0" class="py-10 text-center px-4">
-          <p class="text-xs text-slate-500 font-medium mb-2">No secrets found</p>
-          <p class="text-[11px] text-slate-400 mb-3">
-            {{ searchQuery ? 'Try adjusting your search terms' : 'Add your first password or credential' }}
+        <div v-else-if="filteredSecrets.length === 0" class="py-10 text-center px-4 flex flex-col items-center">
+          <div class="w-10 h-10 rounded-full bg-surface-gray-3 border border-outline-gray-2 flex items-center justify-center text-ink-gray-5 mb-2.5">
+            <Icon :icon="searchQuery ? 'lucide-search' : activeTabFilter === 'bookmarks' ? 'lucide-star' : 'lucide-lock'" class="size-4" />
+          </div>
+          <p class="text-xs text-ink-gray-8 font-semibold mb-1">
+            {{ searchQuery ? 'No matching secrets' : activeTabFilter === 'bookmarks' ? 'No starred secrets' : 'Vault is empty' }}
           </p>
-          <button
-            type="button"
+          <p class="text-[11px] text-ink-gray-5 mb-3.5 max-w-[240px]">
+            {{ searchQuery ? 'Try adjusting your search terms or clear the filter' : activeTabFilter === 'bookmarks' ? 'Star your frequently used credentials for quick access' : 'Add your first password or credential to get started' }}
+          </p>
+          <Button
+            v-if="!searchQuery && activeTabFilter === 'all'"
+            size="sm"
+            variant="solid"
+            icon-left="lucide-plus"
+            label="Add New Secret"
             @click="emit('new-secret')"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition shadow-xs"
-          >
-            <Plus class="w-3.5 h-3.5" />
-            <span>Add New Secret</span>
-          </button>
+          />
+          <Button
+            v-else-if="searchQuery"
+            size="xs"
+            variant="subtle"
+            label="Clear search"
+            @click="searchQuery = ''"
+          />
+          <Button
+            v-else-if="activeTabFilter === 'bookmarks'"
+            size="xs"
+            variant="subtle"
+            label="Show all items"
+            @click="activeTabFilter = 'all'"
+          />
         </div>
 
-        <!-- Secrets Items List -->
+        <!-- Secrets Items List (Espresso card list) -->
         <div v-else class="space-y-1.5">
           <div
             v-for="s in filteredSecrets"
             :key="s.name"
             @click="emit('select', s.name)"
-            class="bg-white hover:bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex items-center justify-between cursor-pointer transition shadow-2xs group"
+            class="bg-surface-base hover:bg-surface-gray-1 active:bg-surface-gray-2 border border-outline-gray-2 hover:border-outline-gray-3 rounded-4 p-2.5 flex items-center justify-between cursor-pointer transition shadow-2xs group"
           >
             <div class="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
               <SecretTypeIcon :type="s.secret_type" size="md" />
               <div class="min-w-0">
-                <div class="text-xs font-bold text-slate-900 truncate group-hover:text-blue-600 transition">
+                <div class="text-xs font-semibold text-ink-gray-9 truncate">
                   {{ s.title }}
                 </div>
-                <div class="text-[11px] text-slate-500 truncate flex items-center gap-1.5">
+                <div class="text-[11px] text-ink-gray-5 truncate flex items-center gap-1.5 mt-0.5">
                   <span>{{ s.username || s.email || s.secret_type }}</span>
-                  <span v-if="s.folder_name" class="inline-flex items-center gap-0.5 text-[10px] text-slate-400">
-                    • <Folder class="w-2.5 h-2.5" /> {{ s.folder_name }}
+                  <span v-if="s.folder_name" class="inline-flex items-center gap-0.5 text-[10px] text-ink-gray-4">
+                    • <Icon icon="lucide-folder" class="size-2.5" /> {{ s.folder_name }}
                   </span>
                 </div>
               </div>
@@ -380,23 +381,24 @@ onMounted(() => {
 
             <!-- Item Actions -->
             <div class="flex items-center gap-1 flex-shrink-0">
-              <button
-                type="button"
+              <Button
+                size="xs"
+                variant="ghost"
+                icon="lucide-star"
+                :label="s.is_bookmark ? 'Remove Star' : 'Star Secret'"
+                :tooltip="s.is_bookmark ? 'Remove Star' : 'Star Secret'"
+                :class="s.is_bookmark ? 'text-ink-amber-6' : 'text-ink-gray-4'"
                 @click="handleToggleBookmark(s, $event)"
-                class="p-1 rounded-md text-slate-300 hover:text-amber-500 transition"
-                :class="{ '!text-amber-500': s.is_bookmark }"
-              >
-                <Star class="w-3.5 h-3.5" :class="{ 'fill-amber-400': s.is_bookmark }" />
-              </button>
-              <button
-                type="button"
+              />
+              <Button
+                size="xs"
+                variant="ghost"
+                :icon="copiedSecretName === s.name ? 'lucide-check' : 'lucide-copy'"
+                :theme="copiedSecretName === s.name ? 'green' : 'gray'"
+                :label="copiedSecretName === s.name ? 'Copied' : 'Copy Password'"
+                tooltip="Copy Password"
                 @click="handleQuickCopyPassword(s, $event)"
-                title="Copy Password"
-                class="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-              >
-                <Check v-if="copiedSecretName === s.name" class="w-3.5 h-3.5 text-emerald-600" />
-                <Copy v-else class="w-3.5 h-3.5" />
-              </button>
+              />
             </div>
           </div>
         </div>
