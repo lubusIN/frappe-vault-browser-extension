@@ -11,6 +11,7 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "submit:chrome": "wxt submit --chrome-zip .output/*-chrome.zip",
     "compile": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

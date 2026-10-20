@@ -74,8 +74,22 @@ When opening the extension popup, enter your Frappe Vault URL (e.g., `https://va
 The repository uses GitHub Actions for continuous testing and releases:
 
 - **Rolling Dev Release**: Triggered on every merge or push to the `main` branch. It continuously builds the extension and updates the rolling pre-release under the [`dev`](https://github.com/lubusIN-internal/vault-browser-extention/releases/tag/dev) tag with fixed asset URLs (`vault-browser-extension-dev-chrome.zip`, `vault-browser-extension-dev-firefox.zip`) and SHA256 checksums.
-- **Tagged Release**: Triggered when a semantic version tag (e.g. `v1.0.0`) is pushed. Builds the production extension packages, attaches versioned zip archives, generates automated release notes, and publishes the GitHub Release.
-- **Pull Request CI**: Validates all incoming pull requests by running ESLint, TypeScript typecheck (`vue-tsc`), Vitest unit/component tests, and packaging builds.
+- **Tagged Release**: Triggered when a semantic version tag (e.g. `v1.0.0`) is pushed. Builds the production extension packages, attaches versioned zip archives, generates automated release notes, and publishes the GitHub Release. If Chrome Web Store secrets are configured, it automatically submits the Chrome package for review.
+- **Pull Request CI**: Validates all incoming pull requests by running ESLint, TypeScript typecheck (`vue-tsc`), Vitest unit/component tests, and packaging builds. Injects downloadable QA build links directly into the PR description.
+
+### Chrome Web Store Publishing Setup
+
+To enable automated submissions to the Chrome Web Store on tagged releases:
+
+1. **Initial Upload**: Upload extension `.output/*-chrome.zip` manually once in the [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole/) to establish the listing and obtain Extension ID.
+2. **API Credentials**: Generate Google API OAuth2 credentials in Google Cloud Console (`Client ID`, `Client Secret`, and `Refresh Token`). You can run `npx wxt submit init` locally for an interactive setup wizard.
+3. **GitHub Secrets**: Add the following repository secrets under **Settings > Secrets and variables > Actions**:
+   - `CHROME_EXTENSION_ID`
+   - `CHROME_CLIENT_ID`
+   - `CHROME_CLIENT_SECRET`
+   - `CHROME_REFRESH_TOKEN`
+
+When these secrets are provided, pushing any version tag (e.g. `v1.0.0`) automatically uploads the new build to the Chrome Web Store.
 
 ## License
 

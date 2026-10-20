@@ -19,6 +19,8 @@ jobs:
   build-and-release:
     name: Build & Release
     runs-on: ubuntu-latest
+    env:
+      HAS_CHROME_SECRETS: ${{ secrets.CHROME_EXTENSION_ID != '' && secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' }}
 
     steps:
       - name: Checkout repository
@@ -133,3 +135,15 @@ jobs:
           files: .output/tagged-assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------------------------------------
+      # 3. Publish to Chrome Web Store (on official tagged release)
+      # -------------------------------------------------------------
+      - name: Submit to Chrome Web Store
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_CHROME_SECRETS == 'true'
+        run: npx wxt submit --chrome-zip .output/*-chrome.zip
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
