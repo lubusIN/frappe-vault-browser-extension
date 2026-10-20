@@ -69,6 +69,14 @@ When opening the extension popup, enter your Frappe Vault URL (e.g., `https://va
 - **User Login**: Standard Frappe user account with `Vault User` or `Vault Admin` role.
 - **API Token**: Use an API Key and API Secret generated in Frappe under **User > API Access**.
 
+## Releases & CI
+
+The repository uses GitHub Actions for continuous testing and releases:
+
+- **Rolling Dev Release**: Triggered on every merge or push to the `main` branch. It continuously builds the extension and updates the rolling pre-release under the [`dev`](https://github.com/lubusIN-internal/vault-browser-extention/releases/tag/dev) tag with fixed asset URLs (`vault-browser-extension-dev-chrome.zip`, `vault-browser-extension-dev-firefox.zip`) and SHA256 checksums.
+- **Tagged Release**: Triggered when a semantic version tag (e.g. `v1.0.0`) is pushed. Builds the production extension packages, attaches versioned zip archives, generates automated release notes, and publishes the GitHub Release.
+- **Pull Request CI**: Validates all incoming pull requests by running ESLint, TypeScript typecheck (`vue-tsc`), Vitest unit/component tests, and packaging builds.
+
 ## License
 
 MIT

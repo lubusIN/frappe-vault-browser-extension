@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-and-build:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npm run compile
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build extension packages (Chrome & Firefox)
+        run: |
+          npm run zip
+          npm run zip:firefox
+
+      - name: Prepare PR preview packages
+        run: |
+          mkdir -p .output/pr-packages
+          PR_NUM="${{ github.event.pull_request.number || 'local' }}"
+          cp .output/*-chrome.zip .output/pr-packages/vault-browser-extension-pr${PR_NUM}-chrome.zip
+          cp .output/*-firefox.zip .output/pr-packages/vault-browser-extension-pr${PR_NUM}-firefox.zip
+          cp .output/*-sources.zip .output/pr-packages/vault-browser-extension-pr${PR_NUM}-sources.zip
+          cd .output/pr-packages
+          sha256sum *.zip > SHA256SUMS.txt
+
+      - name: Upload PR build artifacts
+        uses: actions/upload-artifact@v4
+        id: upload-artifact
+        with:
+          name: extension-pr-${{ github.event.pull_request.number || github.sha }}
+          path: .output/pr-packages/*
+          retention-days: 7
+
+      - name: Update PR description with QA preview links
+        if: github.event.pull_request.number != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ARTIFACT_URL: ${{ steps.upload-artifact.outputs.artifact-url }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node -e '
+          const { execSync } = require("child_process");
+          const fs = require("fs");
+
+          const prNumber = process.env.PR_NUMBER;
+          const artifactUrl = process.env.ARTIFACT_URL;
+          const runId = process.env.RUN_ID;
+          const runNumber = process.env.RUN_NUMBER;
+          const repo = process.env.REPO;
+          const commitSha = (process.env.COMMIT_SHA || "").slice(0, 7);
+          const runUrl = `https://github.com/${repo}/actions/runs/${runId}`;
+          const timestamp = new Date().toISOString().replace("T", " ").replace(/\..+/, "");
+
+          const startMarker = "<!-- frappe-vault-preview-start -->";
+          const endMarker = "<!-- frappe-vault-preview-end -->";
+
+          const previewSection = `${startMarker}
+          ---
+          ### 🧪 QA Preview Build
+
+          A preview build of the Frappe Vault extension has been generated for this pull request:
+
+          - **Download Artifacts**: [extension-pr-${prNumber}](${artifactUrl || runUrl})
+          - **Workflow Run**: [#${runNumber} (${commitSha})](${runUrl})
+          - **Updated At**: ${timestamp} UTC
+
+          #### 📦 Package Contents:
+          - **Chrome / Chromium**: \`vault-browser-extension-pr${prNumber}-chrome.zip\`
+          - **Firefox**: \`vault-browser-extension-pr${prNumber}-firefox.zip\`
+          - **Firefox Sources**: \`vault-browser-extension-pr${prNumber}-sources.zip\`
+          - **Checksums**: \`SHA256SUMS.txt\`
+
+          > 💡 **QA Testing Instructions**:
+          > 1. Download the artifact ZIP from the link above (requires repository read access).
+          > 2. Extract the archive to access the browser-specific \`.zip\` package.
+          > 3. For Chrome: Unzip the chrome package and load it unpacked via \`chrome://extensions\` (Developer mode).
+          > 4. For Firefox: Load temporary add-on via \`about:debugging#/runtime/this-firefox\`.
+          ${endMarker}`;
+
+          try {
+            let body = execSync(`gh pr view ${prNumber} --json body --jq .body`, {
+              encoding: "utf-8",
+              env: process.env,
+            }).trim();
+            if (body === "null") body = "";
+
+            let newBody = "";
+            if (body.includes(startMarker) && body.includes(endMarker)) {
+              newBody = body.replace(
+                new RegExp(`${startMarker}[\\s\\S]*?${endMarker}`, "m"),
+                previewSection
+              );
+            } else {
+              newBody = body ? `${body.trim()}\n\n${previewSection}` : previewSection;
+            }
+
+            fs.writeFileSync("/tmp/pr-body.txt", newBody, "utf-8");
+            execSync(`gh pr edit ${prNumber} --body-file /tmp/pr-body.txt`, {
+              stdio: "inherit",
+              env: process.env,
+            });
+            console.log("Successfully updated PR #" + prNumber + " description with QA preview details.");
+          } catch (err) {
+            console.warn("Could not update PR description:", err.message);
+          }
+          '

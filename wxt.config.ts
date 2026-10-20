@@ -7,7 +7,6 @@ export default defineConfig({
     name: 'Frappe Vault',
     description:
       'Browser extension for Frappe Vault to securely access and manage secrets & passwords',
-    version: '1.0.0',
     permissions: ['storage', 'activeTab', 'clipboardWrite', 'tabs', 'scripting'],
     host_permissions: ['<all_urls>'],
     action: {
