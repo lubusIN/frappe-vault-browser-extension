@@ -112,14 +112,14 @@ export default defineContentScript({
 
       .vault-input-trigger:hover {
         opacity: 1;
-        background-color: rgba(137, 77, 248, 0.12);
+        background-color: rgba(0, 82, 255, 0.12);
         transform: scale(1.08);
       }
 
       .vault-input-trigger:active,
       .vault-input-trigger.active {
         opacity: 1;
-        background-color: rgba(137, 77, 248, 0.2);
+        background-color: rgba(0, 82, 255, 0.2);
         transform: scale(1.02);
       }
 
@@ -155,9 +155,9 @@ export default defineContentScript({
         --v-icon-bg: #f4f4f5;
         --v-icon-text: #71717a;
         --v-icon-border: #e4e4e7;
-        --v-icon-hover-bg: #ede9fe;
-        --v-icon-hover-text: #7c3aed;
-        --v-icon-hover-border: #ddd6fe;
+        --v-icon-hover-bg: #eff6ff;
+        --v-icon-hover-text: #0052ff;
+        --v-icon-hover-border: #bfdbfe;
         --v-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.14), 0 4px 10px -2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05);
 
         color-scheme: light;
@@ -189,9 +189,9 @@ export default defineContentScript({
         --v-icon-bg: #27272a;
         --v-icon-text: #a1a1aa;
         --v-icon-border: #3f3f46;
-        --v-icon-hover-bg: #2e1065;
-        --v-icon-hover-text: #c4b5fd;
-        --v-icon-hover-border: #4c1d95;
+        --v-icon-hover-bg: #1e3a8a;
+        --v-icon-hover-text: #93c5fd;
+        --v-icon-hover-border: #1d4ed8;
         --v-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.65), 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
         color-scheme: dark;
       }
@@ -226,13 +226,13 @@ export default defineContentScript({
         font-weight: 600;
         padding: 1px 6px;
         border-radius: 9999px;
-        background: rgba(137, 77, 248, 0.12);
-        color: #894df8;
+        background: rgba(0, 82, 255, 0.12);
+        color: #0052ff;
       }
 
       .vault-dropdown[data-theme="dark"] .vault-badge {
-        background: rgba(137, 77, 248, 0.22);
-        color: #a78bfa;
+        background: rgba(0, 82, 255, 0.22);
+        color: #60a5fa;
       }
 
       .vault-close {
@@ -353,7 +353,7 @@ export default defineContentScript({
         font-weight: 600;
         padding: 2.5px 7px;
         border-radius: 5px;
-        background: #894df8;
+        background: #0052ff;
         color: #ffffff;
         opacity: 0;
         transform: translateX(4px);
@@ -420,9 +420,9 @@ export default defineContentScript({
     }
 
     const VAULT_SHIELD_SVG = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" class="vault-trigger-shield">
-        <rect width="96" height="96" fill="#894df8" rx="20"/>
-        <path fill="#fdfdfd" d="m75.781 24.906-26.617-9.984a3.5 3.5 0 0 0-2.332 0l-26.617 9.984c-1.332.5-2.164 1.762-2.164 3.16 0 1.532.101 3.063.234 4.594l6.488-2.363L48 21.578l23.223 8.719A58.45 58.45 0 0 1 48 73.82c-11.879-8.953-19.832-22.062-22.395-36.57l-6.355 2.332c3.227 16.504 12.777 31.344 26.852 41.059a3.29 3.29 0 0 0 3.793 0c17.27-11.946 27.75-31.61 28.05-52.606 0-1.398-.832-2.664-2.164-3.164z"/>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 77.25 77.25" fill="none" class="vault-trigger-shield">
+        <path fill="#0052ff" d="M13.371 0h49.211a13.374 13.374 0 0 1 13.367 13.371v49.106a13.37 13.37 0 0 1-3.914 9.453 13.37 13.37 0 0 1-9.453 3.914h-49.21A13.374 13.374 0 0 1 0 62.477L-.001 13.37c0-3.547 1.41-6.95 3.918-9.453A13.36 13.36 0 0 1 13.371 0m0 0"/>
+        <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" d="M6.3 13.3A12.99 12.99 0 0 1 .7 2.8L6.3.7l5.6 2.1a12.98 12.98 0 0 1-5.6 10.5m0 0" transform="matrix(3.42825 0 0 3.44426 15.607 13.83)"/>
       </svg>
     `;
 

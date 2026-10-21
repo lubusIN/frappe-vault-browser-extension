@@ -91,6 +91,14 @@ To enable automated submissions to the Chrome Web Store on tagged releases:
 
 When these secrets are provided, pushing any version tag (e.g. `v1.0.0`) automatically uploads the new build to the Chrome Web Store.
 
+## Meet Your Artisans
+
+[LUBUS](https://lubus.in/?utm_source=github&utm_medium=open-source&utm_campaign=frappe-vault) is a web design agency based in Mumbai.
+
+<a href="https://cal.com/lubus">
+<img src="https://raw.githubusercontent.com/lubusIN/.github/refs/heads/main/profile/banner.png" />
+</a>
+
 ## License
 
-MIT
+Frappe Vault - Browser Extention is open-sourced licensed under the [MIT License](LICENSE).
