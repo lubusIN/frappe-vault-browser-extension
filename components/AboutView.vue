@@ -23,11 +23,11 @@ function handleOpenVaultApp() {
 }
 
 function handleOpenExtensionRepo() {
-  openExternalUrl('https://github.com/lubusIN/vault-browser-extention');
+  openExternalUrl('https://github.com/lubusIN/frappe-vault-browser-extension');
 }
 
 function handleOpenIssues() {
-  openExternalUrl('https://github.com/lubusIN/vault-browser-extention/issues');
+  openExternalUrl('https://github.com/lubusIN/frappe-vault-browser-extension/issues');
 }
 
 function handleOpenLubus() {
@@ -96,7 +96,7 @@ onUnmounted(() => {
           <div class="flex items-center gap-2.5">
             <GithubIcon class="size-4 text-ink-gray-7" />
             <div>
-              <div class="font-medium text-ink-gray-9">Frappe Vault App</div>
+              <div class="font-medium text-ink-gray-9">Web App</div>
               <div class="text-[10px] text-ink-gray-5">github.com/lubusIN/frappe-vault</div>
             </div>
           </div>
@@ -112,9 +112,9 @@ onUnmounted(() => {
           <div class="flex items-center gap-2.5">
             <GithubIcon class="size-4 text-ink-gray-7" />
             <div>
-              <div class="font-medium text-ink-gray-9">Vault Browser Extension</div>
+              <div class="font-medium text-ink-gray-9">Browser Extension</div>
               <div class="text-[10px] text-ink-gray-5">
-                github.com/lubusIN/vault-browser-extention
+                github.com/lubusIN/frappe-vault-browser-extension
               </div>
             </div>
           </div>
