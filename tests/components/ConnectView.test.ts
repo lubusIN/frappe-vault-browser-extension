@@ -36,20 +36,4 @@ describe('ConnectView Component', () => {
 
     expect(wrapper.text()).toContain('Invalid API Key or Secret');
   });
-
-  it('populates localhost defaults when clicking Local Dev helper', async () => {
-    const wrapper = mount(ConnectView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-        },
-      },
-    });
-
-    const localBtn = wrapper.findAll('button').find((b) => b.text().includes('localhost:8000'));
-    if (localBtn) {
-      await localBtn.trigger('click');
-      expect(wrapper.html()).toContain('http://localhost:8000');
-    }
-  });
 });

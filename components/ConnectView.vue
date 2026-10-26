@@ -33,11 +33,6 @@ async function handleConnect() {
     await loginWithToken(instanceUrl.value, apiKey.value, apiSecret.value);
   }
 }
-
-function setLocalDev() {
-  instanceUrl.value = 'http://localhost:8000';
-  username.value = 'Administrator';
-}
 </script>
 
 <template>
@@ -141,19 +136,6 @@ function setLocalDev() {
           </Button>
         </div>
       </form>
-
-      <!-- Local dev helper -->
-      <div class="mt-3 text-center">
-        <Button
-          variant="ghost"
-          size="xs"
-          theme="gray"
-          class="text-ink-gray-5 hover:text-ink-gray-7 underline"
-          @click="setLocalDev"
-        >
-          Use local development site (localhost:8000)
-        </Button>
-      </div>
     </div>
   </div>
 </template>
