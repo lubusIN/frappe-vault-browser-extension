@@ -1,10 +1,17 @@
-import type { AuthInfo } from '../types/vault';
+import type { AuthInfo, VaultSecretSummary } from '../types/vault';
 
 const STORAGE_KEYS = {
   AUTH_INFO: 'frappe_vault_auth_info',
   SETTINGS: 'frappe_vault_settings',
   CONNECT_DRAFT: 'frappe_vault_connect_draft',
+  SECRETS_CACHE: 'frappe_vault_secrets_cache',
 } as const;
+
+export interface CachedSecretsData {
+  secrets: VaultSecretSummary[];
+  total: number;
+  updatedAt: number;
+}
 
 export interface ConnectDraft {
   instanceUrl?: string;
@@ -98,5 +105,36 @@ export async function setStoredConnectDraft(draft: ConnectDraft): Promise<void> 
     });
   } catch (err) {
     console.error('Failed to save connect draft to storage:', err);
+  }
+}
+
+export async function getStoredSecretsCache(): Promise<CachedSecretsData | null> {
+  try {
+    const res = await browser.storage.local.get(STORAGE_KEYS.SECRETS_CACHE);
+    const data = res[STORAGE_KEYS.SECRETS_CACHE] as CachedSecretsData | undefined;
+    if (data && Array.isArray(data.secrets)) {
+      return data;
+    }
+  } catch (err) {
+    console.error('Failed to get secrets cache from storage:', err);
+  }
+  return null;
+}
+
+export async function setStoredSecretsCache(cache: CachedSecretsData): Promise<void> {
+  try {
+    await browser.storage.local.set({
+      [STORAGE_KEYS.SECRETS_CACHE]: cache,
+    });
+  } catch (err) {
+    console.error('Failed to save secrets cache to storage:', err);
+  }
+}
+
+export async function clearStoredSecretsCache(): Promise<void> {
+  try {
+    await browser.storage.local.remove(STORAGE_KEYS.SECRETS_CACHE);
+  } catch (err) {
+    console.error('Failed to clear secrets cache from storage:', err);
   }
 }

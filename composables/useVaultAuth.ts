@@ -1,6 +1,12 @@
 import { ref } from 'vue';
 import type { AuthInfo } from '../types/vault';
-import { getStoredAuthInfo, setStoredAuthInfo, clearStoredAuthInfo } from '../utils/storage';
+import {
+  getStoredAuthInfo,
+  setStoredAuthInfo,
+  clearStoredAuthInfo,
+  clearStoredSecretsCache,
+} from '../utils/storage';
+import { cachedSecrets, cachedTotal, isSecretsCacheLoaded } from './useVaultSecrets';
 
 export const authState = ref<AuthInfo | null>(null);
 export const isAuthInitializing = ref(true);
@@ -17,6 +23,10 @@ function normalizeUrl(url: string): string {
 
 export function useVaultAuth() {
   async function initAuth() {
+    if (authState.value) {
+      isAuthInitializing.value = false;
+      return;
+    }
     isAuthInitializing.value = true;
     authError.value = null;
     try {
@@ -55,7 +65,11 @@ export function useVaultAuth() {
         if (res.status === 401 || res.status === 403) {
           authError.value = 'Session expired. Please sign in again.';
           authState.value = null;
+          cachedSecrets.value = [];
+          cachedTotal.value = 0;
+          isSecretsCacheLoaded.value = false;
           await clearStoredAuthInfo();
+          await clearStoredSecretsCache();
           return false;
         }
         return false;
@@ -72,7 +86,11 @@ export function useVaultAuth() {
         return true;
       } else {
         authState.value = null;
+        cachedSecrets.value = [];
+        cachedTotal.value = 0;
+        isSecretsCacheLoaded.value = false;
         await clearStoredAuthInfo();
+        await clearStoredSecretsCache();
         return false;
       }
     } catch (err) {
@@ -216,7 +234,11 @@ export function useVaultAuth() {
 
     authState.value = null;
     authError.value = null;
+    cachedSecrets.value = [];
+    cachedTotal.value = 0;
+    isSecretsCacheLoaded.value = false;
     await clearStoredAuthInfo();
+    await clearStoredSecretsCache();
     isAuthLoading.value = false;
   }
 
@@ -226,6 +248,7 @@ export function useVaultAuth() {
     isAuthLoading,
     authError,
     initAuth,
+    verifySession,
     loginWithPassword,
     loginWithToken,
     logout,

@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import SecretsListView from '../../components/SecretsListView.vue';
 import { authState } from '../../composables/useVaultAuth';
+import { cachedSecrets, cachedTotal } from '../../composables/useVaultSecrets';
+import { mockStorageLocal } from '../setup';
 import type { VaultSecretSummary } from '../../types/vault';
 
 const mockSecretsList: VaultSecretSummary[] = [
@@ -37,7 +39,10 @@ vi.mock('../../composables/useVaultApi', () => ({
 }));
 
 describe('SecretsListView Component', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await mockStorageLocal.clear();
+    cachedSecrets.value = [];
+    cachedTotal.value = 0;
     authState.value = {
       instanceUrl: 'https://vault.example.com',
       user: 'admin@example.com',
@@ -112,5 +117,65 @@ describe('SecretsListView Component', () => {
       await newBtn.trigger('click');
       expect(wrapper.emitted('new-secret')).toBeTruthy();
     }
+  });
+
+  it('loads and renders cached secrets immediately without showing loading spinner', async () => {
+    await mockStorageLocal.set({
+      frappe_vault_secrets_cache: {
+        secrets: mockSecretsList,
+        total: 2,
+        updatedAt: Date.now(),
+      },
+    });
+
+    const wrapper = mount(SecretsListView, {
+      global: {
+        stubs: {
+          VaultIcon: true,
+          SecretTypeIcon: true,
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(wrapper.text()).not.toContain('Loading vault...');
+    expect(wrapper.text()).toContain('GitHub Developer');
+    expect(wrapper.text()).toContain('AWS Production Access Key');
+  });
+
+  it('renders secrets after fetching when cache is initially empty', async () => {
+    await mockStorageLocal.clear();
+
+    const wrapper = mount(SecretsListView, {
+      global: {
+        stubs: {
+          VaultIcon: true,
+          SecretTypeIcon: true,
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 20));
+    expect(wrapper.text()).toContain('GitHub Developer');
+  });
+
+  it('renders preloaded in-memory secrets immediately on frame 0', () => {
+    cachedSecrets.value = mockSecretsList;
+    cachedTotal.value = 2;
+
+    const wrapper = mount(SecretsListView, {
+      global: {
+        stubs: {
+          VaultIcon: true,
+          SecretTypeIcon: true,
+        },
+      },
+    });
+
+    // Synchronously rendered without any timers or promises
+    expect(wrapper.text()).not.toContain('Loading vault...');
+    expect(wrapper.text()).toContain('GitHub Developer');
+    expect(wrapper.text()).toContain('AWS Production Access Key');
   });
 });

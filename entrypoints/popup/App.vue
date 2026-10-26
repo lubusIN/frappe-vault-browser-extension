@@ -23,7 +23,9 @@ const newSecretInitialTitle = ref<string | undefined>(undefined);
 const showGeneratorModal = ref(false);
 
 onMounted(async () => {
-  await initAuth();
+  if (!authState.value) {
+    await initAuth();
+  }
 });
 
 function handleSelectSecret(secretName: string) {

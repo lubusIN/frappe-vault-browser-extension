@@ -7,6 +7,8 @@ import type { VaultSecretSummary } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
 import VaultIcon from './VaultIcon.vue';
 import { matchesDomain, copyText, openExternalUrl } from '../utils/helpers';
+import { getStoredSecretsCache, setStoredSecretsCache } from '../utils/storage';
+import { cachedSecrets, cachedTotal } from '../composables/useVaultSecrets';
 import { Button, TextInput, Badge, Spinner, Dropdown, Icon } from 'frappe-ui';
 import type { DropdownOptions } from 'frappe-ui';
 
@@ -23,9 +25,10 @@ const { authState } = useVaultAuth();
 const { activeTab, autofillCredentials } = useActiveTab();
 
 const PAGE_SIZE = 30;
-const secrets = ref<VaultSecretSummary[]>([]);
-const totalSecrets = ref(0);
-const isLoading = ref(true);
+const secrets = ref<VaultSecretSummary[]>([...cachedSecrets.value]);
+const totalSecrets = ref(cachedTotal.value || cachedSecrets.value.length);
+const isLoading = ref(cachedSecrets.value.length === 0);
+const isRefreshing = ref(false);
 const isLoadingMore = ref(false);
 const searchQuery = ref('');
 const activeTabFilter = ref<'all' | 'bookmarks'>('all');
@@ -146,10 +149,11 @@ const typeDropdownOptions = computed<DropdownOptions>(() => [
   },
 ]);
 
-async function fetchVaultSecrets(reset = true) {
-  if (reset) {
+async function fetchVaultSecrets(showLoading = false) {
+  if (showLoading && secrets.value.length === 0) {
     isLoading.value = true;
   }
+  isRefreshing.value = true;
   try {
     const res = await getSecrets({
       limit: PAGE_SIZE,
@@ -158,10 +162,18 @@ async function fetchVaultSecrets(reset = true) {
     });
     secrets.value = res.secrets || [];
     totalSecrets.value = res.total ?? secrets.value.length;
+    cachedSecrets.value = secrets.value;
+    cachedTotal.value = totalSecrets.value;
+    await setStoredSecretsCache({
+      secrets: secrets.value,
+      total: totalSecrets.value,
+      updatedAt: Date.now(),
+    });
   } catch (err) {
     console.error('Failed to fetch secrets:', err);
   } finally {
     isLoading.value = false;
+    isRefreshing.value = false;
   }
 }
 
@@ -184,6 +196,13 @@ async function handleLoadMore() {
     if (res.total !== undefined) {
       totalSecrets.value = res.total;
     }
+    cachedSecrets.value = secrets.value;
+    cachedTotal.value = totalSecrets.value;
+    await setStoredSecretsCache({
+      secrets: secrets.value,
+      total: totalSecrets.value,
+      updatedAt: Date.now(),
+    });
   } catch (err) {
     console.error('Failed to load more secrets:', err);
   } finally {
@@ -303,6 +322,12 @@ async function handleToggleBookmark(secret: VaultSecretSummary, event: Event) {
   try {
     const res = await toggleBookmark(secret.name);
     secret.is_bookmark = res.is_bookmark;
+    cachedSecrets.value = secrets.value;
+    await setStoredSecretsCache({
+      secrets: secrets.value,
+      total: totalSecrets.value,
+      updatedAt: Date.now(),
+    });
   } catch {}
 }
 
@@ -316,8 +341,30 @@ function handleAddForCurrentTab() {
   emit('new-secret', activeTab.value?.url, activeTab.value?.title || activeTab.value?.domain);
 }
 
-onMounted(() => {
-  fetchVaultSecrets();
+onMounted(async () => {
+  // If we already have preloaded secrets in memory, silent background revalidate
+  if (secrets.value.length > 0) {
+    fetchVaultSecrets(false);
+    return;
+  }
+
+  // Otherwise check local storage
+  try {
+    const cached = await getStoredSecretsCache();
+    if (cached && Array.isArray(cached.secrets) && cached.secrets.length > 0) {
+      secrets.value = cached.secrets;
+      totalSecrets.value = cached.total ?? cached.secrets.length;
+      cachedSecrets.value = cached.secrets;
+      cachedTotal.value = totalSecrets.value;
+      isLoading.value = false;
+      // Background revalidation without blocking UI
+      fetchVaultSecrets(false);
+      return;
+    }
+  } catch (err) {
+    console.warn('Failed to read secrets cache:', err);
+  }
+  fetchVaultSecrets(true);
 });
 </script>
 
@@ -437,9 +484,9 @@ onMounted(() => {
         size="sm"
         variant="subtle"
         icon="lucide-refresh-cw"
-        :loading="isLoading"
+        :loading="isRefreshing || (isLoading && secrets.length === 0)"
         tooltip="Refresh Vault"
-        @click="fetchVaultSecrets"
+        @click="() => fetchVaultSecrets(false)"
       />
     </div>
 
@@ -548,7 +595,7 @@ onMounted(() => {
 
         <!-- Loading State -->
         <div
-          v-if="isLoading"
+          v-if="isLoading && secrets.length === 0"
           class="py-12 flex flex-col items-center justify-center text-ink-gray-5 text-xs gap-2"
         >
           <Spinner size="md" />

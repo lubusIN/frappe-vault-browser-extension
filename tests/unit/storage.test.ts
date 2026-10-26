@@ -7,6 +7,9 @@ import {
   setStoredSettings,
   getStoredConnectDraft,
   setStoredConnectDraft,
+  getStoredSecretsCache,
+  setStoredSecretsCache,
+  clearStoredSecretsCache,
 } from '../../utils/storage';
 import { mockStorageLocal } from '../setup';
 import type { AuthInfo } from '../../types/vault';
@@ -98,6 +101,50 @@ describe('Storage Utility', () => {
       expect(draft?.instanceUrl).toBe('https://vault.example.com');
       expect(draft?.authMode).toBe('password');
       expect(draft?.username).toBe('admin@example.com');
+    });
+  });
+
+  describe('Secrets Cache Storage', () => {
+    it('returns null when no cache is stored', async () => {
+      const cache = await getStoredSecretsCache();
+      expect(cache).toBeNull();
+    });
+
+    it('stores and retrieves cached secrets data', async () => {
+      const sampleCache = {
+        secrets: [
+          {
+            name: 'sec-1',
+            title: 'Sample Secret',
+            secret_type: 'Password' as const,
+            is_bookmark: 0,
+            username: 'sample_user',
+          },
+        ],
+        total: 1,
+        updatedAt: 1234567890,
+      };
+
+      await setStoredSecretsCache(sampleCache);
+      const retrieved = await getStoredSecretsCache();
+
+      expect(retrieved).not.toBeNull();
+      expect(retrieved?.secrets).toHaveLength(1);
+      expect(retrieved?.secrets[0].name).toBe('sec-1');
+      expect(retrieved?.total).toBe(1);
+      expect(retrieved?.updatedAt).toBe(1234567890);
+    });
+
+    it('clears stored secrets cache', async () => {
+      await setStoredSecretsCache({
+        secrets: [],
+        total: 0,
+        updatedAt: Date.now(),
+      });
+
+      await clearStoredSecretsCache();
+      const afterClear = await getStoredSecretsCache();
+      expect(afterClear).toBeNull();
     });
   });
 });

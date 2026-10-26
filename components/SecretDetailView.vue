@@ -7,6 +7,8 @@ import type { VaultSecretDetail, TotpResult } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
 import SecretFieldRow from './SecretFieldRow.vue';
 import { copyText, formatRelativeTime, openExternalUrl } from '../utils/helpers';
+import { getStoredSecretsCache, setStoredSecretsCache } from '../utils/storage';
+import { cachedSecrets, cachedTotal } from '../composables/useVaultSecrets';
 import { Button, Badge, Spinner, Dialog, Progress, Icon } from 'frappe-ui';
 
 const emit = defineEmits<{
@@ -184,6 +186,18 @@ async function handleToggleBookmark() {
   try {
     const res = await toggleBookmark(secret.value.name);
     secret.value.is_bookmark = res.is_bookmark;
+    const match = cachedSecrets.value.find((s) => s.name === secret.value!.name);
+    if (match) {
+      match.is_bookmark = res.is_bookmark;
+    }
+    const cached = await getStoredSecretsCache();
+    if (cached && Array.isArray(cached.secrets)) {
+      const storageMatch = cached.secrets.find((s) => s.name === secret.value!.name);
+      if (storageMatch) {
+        storageMatch.is_bookmark = res.is_bookmark;
+        await setStoredSecretsCache(cached);
+      }
+    }
   } catch {}
 }
 
@@ -192,6 +206,16 @@ async function handleDelete() {
   isDeleting.value = true;
   try {
     await deleteSecret(secret.value.name);
+    cachedSecrets.value = cachedSecrets.value.filter((s) => s.name !== secret.value!.name);
+    cachedTotal.value = Math.max(0, cachedTotal.value - 1);
+    const cached = await getStoredSecretsCache();
+    if (cached && Array.isArray(cached.secrets)) {
+      await setStoredSecretsCache({
+        ...cached,
+        secrets: cached.secrets.filter((s) => s.name !== secret.value!.name),
+        total: Math.max(0, cached.total - 1),
+      });
+    }
     emit('deleted', secret.value.name);
     emit('back');
   } catch (err: any) {
