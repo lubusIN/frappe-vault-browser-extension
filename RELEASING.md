@@ -38,12 +38,14 @@ The [Release workflow](.github/workflows/release.yml) will handle building the e
 To enable automated submissions on tagged releases:
 
 1. **Initial Upload**: Upload a built Chrome package (`.output/*-chrome.zip`) manually once via the [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole/) to establish the extension listing and get an Extension ID.
-2. **API Credentials**: Generate Google API OAuth2 credentials in Google Cloud Console (`Client ID`, `Client Secret`, and `Refresh Token`). You can run `npx wxt submit init` locally for an interactive setup wizard.
-3. **GitHub Secrets**: Add the following secrets in your repository settings (**Settings > Secrets and variables > Actions**):
+2. **API Credentials (API v2 - Recommended)**: Run `npx wxt submit init` locally, select **v2 (recommended)**, and provide your Google Cloud Service Account credentials (`.json` key). This creates a local `.env.submit` file.
+3. **GitHub Secrets**: Add the generated credentials as repository secrets (**Settings > Secrets and variables > Actions**):
    - `CHROME_EXTENSION_ID`
-   - `CHROME_CLIENT_ID`
-   - `CHROME_CLIENT_SECRET`
-   - `CHROME_REFRESH_TOKEN`
+   - `CHROME_PUBLISHER_ID`
+   - `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`
+   - `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`
+
+_(Legacy API v1 with `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, and `CHROME_REFRESH_TOKEN` is also supported)._
 
 When these secrets are set, any `v*` tag push automatically submits the build to the Chrome Web Store.
 
