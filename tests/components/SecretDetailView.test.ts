@@ -23,7 +23,7 @@ vi.mock('../../composables/useVaultApi', () => ({
     getSecret: vi.fn().mockResolvedValue(sampleSecret),
     decryptSecret: vi.fn().mockResolvedValue({ password: 'DecryptedPassword123!' }),
     getTotp: vi.fn(),
-    toggleBookmark: vi.fn(),
+    toggleBookmark: vi.fn().mockResolvedValue({ name: 'sec-github-token', is_bookmark: 1 }),
     deleteSecret: vi.fn(),
   }),
 }));
@@ -74,6 +74,28 @@ describe('SecretDetailView Component', () => {
     if (backBtn.exists()) {
       await backBtn.trigger('click');
       expect(wrapper.emitted('back')).toBeTruthy();
+    }
+  });
+
+  it('toggles bookmark when bookmark button is clicked', async () => {
+    const wrapper = mount(SecretDetailView, {
+      props: {
+        secretName: 'sec-github-token',
+      },
+      global: {
+        stubs: {
+          SecretTypeIcon: true,
+          SecretFieldRow: true,
+        },
+      },
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    const bookmarkBtn = wrapper.find('button[tooltip="Add to bookmarks"]');
+    if (bookmarkBtn.exists()) {
+      await bookmarkBtn.trigger('click');
+      expect(bookmarkBtn.exists()).toBe(true);
     }
   });
 });

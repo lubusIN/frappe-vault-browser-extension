@@ -21,6 +21,56 @@ function normalizeUrl(url: string): string {
   return clean.replace(/\/+$/, '');
 }
 
+export async function fetchCsrfToken(instanceUrl: string): Promise<string | null> {
+  const endpoints = ['/vault', '/app'];
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(`${instanceUrl}${endpoint}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const text = await res.text();
+        const match =
+          text.match(/window\["csrf_token"\]\s*=\s*"([^"]+)"/) ||
+          text.match(/["']csrf_token["']\s*[:=]\s*["']([^"']+)["']/i) ||
+          text.match(/csrf_token\s*=\s*["']([^"']+)["']/i);
+        if (match && match[1] && match[1] !== '{{ csrf_token }}') {
+          return match[1];
+        }
+      }
+    } catch {}
+  }
+  return null;
+}
+
+export async function resolveCsrfToken(
+  instanceUrl: string,
+  existingToken?: string
+): Promise<string | undefined> {
+  if (existingToken) return existingToken;
+
+  if (typeof window !== 'undefined' && (window as any).csrf_token) {
+    return (window as any).csrf_token;
+  }
+
+  const extBrowser = typeof browser !== 'undefined' ? (browser as any) : (globalThis as any).chrome;
+  if (extBrowser?.cookies?.get) {
+    try {
+      const cookie = await extBrowser.cookies.get({
+        url: instanceUrl,
+        name: 'csrf_token',
+      });
+      if (cookie?.value && cookie.value !== 'None') {
+        return cookie.value;
+      }
+    } catch {}
+  }
+
+  const fetched = await fetchCsrfToken(instanceUrl);
+  return fetched || undefined;
+}
+
 export function useVaultAuth() {
   async function initAuth() {
     if (authState.value) {
@@ -77,9 +127,15 @@ export function useVaultAuth() {
 
       const data = await res.json();
       if (data.message && data.message !== 'Guest') {
+        const csrfToken =
+          info.authType === 'password'
+            ? await resolveCsrfToken(info.instanceUrl, info.csrfToken)
+            : undefined;
+
         authState.value = {
           ...info,
           user: data.message,
+          csrfToken,
           isConnected: true,
         };
         await setStoredAuthInfo(authState.value);
@@ -144,11 +200,14 @@ export function useVaultAuth() {
       const userData = await userRes.json();
       const currentUser = userData.message || usr;
 
+      const csrfToken = await resolveCsrfToken(instanceUrl);
+
       const newAuthInfo: AuthInfo = {
         instanceUrl,
         authType: 'password',
         user: currentUser,
         fullName: data?.full_name || currentUser,
+        csrfToken,
         isConnected: true,
       };
 

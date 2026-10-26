@@ -65,6 +65,7 @@ export interface AuthInfo {
   fullName?: string;
   apiKey?: string;
   apiSecret?: string;
+  csrfToken?: string;
   isConnected: boolean;
 }
 

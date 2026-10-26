@@ -1,4 +1,5 @@
-import { authState } from './useVaultAuth';
+import { authState, fetchCsrfToken, resolveCsrfToken } from './useVaultAuth';
+import { setStoredAuthInfo } from '../utils/storage';
 import type {
   VaultSecretSummary,
   VaultSecretDetail,
@@ -44,6 +45,19 @@ export function useVaultApi() {
       headers['Authorization'] = `token ${auth.apiKey}:${auth.apiSecret}`;
     }
 
+    let csrfToken = auth.csrfToken;
+    if (!csrfToken && auth.authType === 'password') {
+      csrfToken = await resolveCsrfToken(auth.instanceUrl);
+      if (csrfToken) {
+        auth.csrfToken = csrfToken;
+        await setStoredAuthInfo(auth);
+      }
+    }
+
+    if (csrfToken) {
+      headers['X-Frappe-CSRF-Token'] = csrfToken;
+    }
+
     const reqInit: RequestInit = {
       method,
       headers,
@@ -55,7 +69,19 @@ export function useVaultApi() {
       reqInit.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, reqInit);
+    let response = await fetch(url, reqInit);
+    if (response.status === 403 && auth.authType === 'password') {
+      // CSRF token may have expired or been missing; re-fetch from /vault and retry once
+      const refreshedToken = await fetchCsrfToken(auth.instanceUrl);
+      if (refreshedToken && refreshedToken !== csrfToken) {
+        auth.csrfToken = refreshedToken;
+        await setStoredAuthInfo(auth);
+        headers['X-Frappe-CSRF-Token'] = refreshedToken;
+        reqInit.headers = headers;
+        response = await fetch(url, reqInit);
+      }
+    }
+
     if (!response.ok) {
       let errMsg = `Request failed: ${response.status} ${response.statusText}`;
       try {

@@ -6,6 +6,7 @@ import { useActiveTab } from '../composables/useActiveTab';
 import type { VaultSecretSummary } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
 import VaultIcon from './VaultIcon.vue';
+import BookmarkIcon from './BookmarkIcon.vue';
 import { matchesDomain, copyText, openExternalUrl } from '../utils/helpers';
 import { getStoredSecretsCache, setStoredSecretsCache } from '../utils/storage';
 import { cachedSecrets, cachedTotal } from '../composables/useVaultSecrets';
@@ -48,7 +49,7 @@ const remainingCount = computed(() => {
   return Math.max(0, totalSecrets.value - secrets.value.length);
 });
 
-function toggleStarredFilter() {
+function toggleBookmarksFilter() {
   activeTabFilter.value = activeTabFilter.value === 'bookmarks' ? 'all' : 'bookmarks';
 }
 
@@ -317,18 +318,62 @@ async function handleQuickAutofill(secret: VaultSecretSummary, event: Event) {
   }
 }
 
-async function handleToggleBookmark(secret: VaultSecretSummary, event: Event) {
-  event.stopPropagation();
+async function handleToggleBookmark(secret: VaultSecretSummary, event?: Event) {
+  event?.stopPropagation();
+  const previousState = secret.is_bookmark ? 1 : 0;
+  const newState = previousState ? 0 : 1;
+
+  // 1. Optimistic update across all references with immutable maps
+  secret.is_bookmark = newState;
+  secrets.value = secrets.value.map((s) =>
+    s.name === secret.name ? { ...s, is_bookmark: newState } : s
+  );
+  cachedSecrets.value = cachedSecrets.value.map((s) =>
+    s.name === secret.name ? { ...s, is_bookmark: newState } : s
+  );
+  if (serverSearchResults.value) {
+    serverSearchResults.value = serverSearchResults.value.map((s) =>
+      s.name === secret.name ? { ...s, is_bookmark: newState } : s
+    );
+  }
+
   try {
     const res = await toggleBookmark(secret.name);
-    secret.is_bookmark = res.is_bookmark;
-    cachedSecrets.value = secrets.value;
+    const confirmedState =
+      res && res.is_bookmark !== undefined ? (res.is_bookmark ? 1 : 0) : newState;
+    secret.is_bookmark = confirmedState;
+    secrets.value = secrets.value.map((s) =>
+      s.name === secret.name ? { ...s, is_bookmark: confirmedState } : s
+    );
+    cachedSecrets.value = cachedSecrets.value.map((s) =>
+      s.name === secret.name ? { ...s, is_bookmark: confirmedState } : s
+    );
+    if (serverSearchResults.value) {
+      serverSearchResults.value = serverSearchResults.value.map((s) =>
+        s.name === secret.name ? { ...s, is_bookmark: confirmedState } : s
+      );
+    }
     await setStoredSecretsCache({
       secrets: secrets.value,
       total: totalSecrets.value,
       updatedAt: Date.now(),
     });
-  } catch {}
+  } catch (err) {
+    console.error('Failed to toggle bookmark:', err);
+    // Revert optimistic update on failure
+    secret.is_bookmark = previousState;
+    secrets.value = secrets.value.map((s) =>
+      s.name === secret.name ? { ...s, is_bookmark: previousState } : s
+    );
+    cachedSecrets.value = cachedSecrets.value.map((s) =>
+      s.name === secret.name ? { ...s, is_bookmark: previousState } : s
+    );
+    if (serverSearchResults.value) {
+      serverSearchResults.value = serverSearchResults.value.map((s) =>
+        s.name === secret.name ? { ...s, is_bookmark: previousState } : s
+      );
+    }
+  }
 }
 
 function handleOpenFullVault(path: string = '/secrets') {
@@ -446,20 +491,18 @@ onMounted(async () => {
         </TextInput>
       </div>
 
-      <!-- Starred Filter Toggle Button -->
+      <!-- Bookmarks Filter Toggle Button -->
       <Button
         size="sm"
         :variant="activeTabFilter === 'bookmarks' ? 'solid' : 'subtle'"
-        :tooltip="activeTabFilter === 'bookmarks' ? 'Show All Items' : 'Show Starred'"
-        @click="toggleStarredFilter"
+        :tooltip="activeTabFilter === 'bookmarks' ? 'Show All Items' : 'Show Bookmarks'"
+        @click="toggleBookmarksFilter"
       >
         <template #icon>
-          <Icon
-            icon="lucide-star"
+          <BookmarkIcon
+            :filled="activeTabFilter === 'bookmarks'"
             class="size-3.5 transition-colors"
-            :class="
-              activeTabFilter === 'bookmarks' ? 'text-amber-400 fill-amber-400' : 'text-ink-gray-5'
-            "
+            :class="activeTabFilter === 'bookmarks' ? 'text-amber-500' : 'text-ink-gray-5'"
           />
         </template>
       </Button>
@@ -568,7 +611,7 @@ onMounted(async () => {
         >
           <div class="flex items-center gap-1.5 min-w-0">
             <span class="truncate">{{
-              activeTabFilter === 'bookmarks' ? 'Starred Secrets' : 'Vault Secrets'
+              activeTabFilter === 'bookmarks' ? 'Bookmarked Secrets' : 'Vault Secrets'
             }}</span>
             <span v-if="selectedType !== 'All'" class="text-ink-gray-4">•</span>
             <span v-if="selectedType !== 'All'" class="text-ink-gray-7 truncate">{{
@@ -615,7 +658,7 @@ onMounted(async () => {
                 searchQuery
                   ? 'lucide-search'
                   : activeTabFilter === 'bookmarks'
-                    ? 'lucide-star'
+                    ? 'lucide-bookmark'
                     : 'lucide-lock'
               "
               class="size-4"
@@ -626,7 +669,7 @@ onMounted(async () => {
               searchQuery
                 ? 'No matching secrets'
                 : activeTabFilter === 'bookmarks'
-                  ? 'No starred secrets'
+                  ? 'No bookmarks yet'
                   : selectedType !== 'All'
                     ? `No ${selectedType} secrets`
                     : 'Vault is empty'
@@ -637,7 +680,7 @@ onMounted(async () => {
               searchQuery
                 ? 'Try adjusting your search terms or clear the filter'
                 : activeTabFilter === 'bookmarks'
-                  ? 'Star your frequently used credentials for quick access'
+                  ? 'Bookmark your frequently used credentials for quick access'
                   : selectedType !== 'All'
                     ? `No secrets found matching type "${selectedType}"`
                     : 'Add your first password or credential to get started'
@@ -688,16 +731,23 @@ onMounted(async () => {
             </div>
 
             <!-- Item Actions -->
-            <div class="flex items-center gap-1 flex-shrink-0">
+            <div class="flex items-center gap-1 flex-shrink-0" @click.stop>
               <Button
                 size="xs"
                 variant="ghost"
-                icon="lucide-star"
-                :label="s.is_bookmark ? 'Remove Star' : 'Star Secret'"
-                :tooltip="s.is_bookmark ? 'Remove Star' : 'Star Secret'"
-                :class="s.is_bookmark ? 'text-ink-amber-6' : 'text-ink-gray-4'"
-                @click="handleToggleBookmark(s, $event)"
-              />
+                :tooltip="s.is_bookmark ? 'Remove from bookmarks' : 'Add to bookmarks'"
+                @click.stop="handleToggleBookmark(s, $event)"
+              >
+                <template #icon>
+                  <BookmarkIcon
+                    :filled="Boolean(s.is_bookmark)"
+                    class="size-3.5 transition-colors"
+                    :class="
+                      s.is_bookmark ? 'text-amber-500' : 'text-ink-gray-4 hover:text-amber-500'
+                    "
+                  />
+                </template>
+              </Button>
               <Button
                 size="xs"
                 variant="ghost"
@@ -705,7 +755,7 @@ onMounted(async () => {
                 :theme="copiedSecretName === s.name ? 'green' : 'gray'"
                 :label="copiedSecretName === s.name ? 'Copied' : 'Copy Password'"
                 tooltip="Copy Password"
-                @click="handleQuickCopyPassword(s, $event)"
+                @click.stop="handleQuickCopyPassword(s, $event)"
               />
             </div>
           </div>

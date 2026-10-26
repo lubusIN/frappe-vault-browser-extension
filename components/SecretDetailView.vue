@@ -6,6 +6,7 @@ import { useActiveTab } from '../composables/useActiveTab';
 import type { VaultSecretDetail, TotpResult } from '../types/vault';
 import SecretTypeIcon from './SecretTypeIcon.vue';
 import SecretFieldRow from './SecretFieldRow.vue';
+import BookmarkIcon from './BookmarkIcon.vue';
 import { copyText, formatRelativeTime, openExternalUrl } from '../utils/helpers';
 import { getStoredSecretsCache, setStoredSecretsCache } from '../utils/storage';
 import { cachedSecrets, cachedTotal } from '../composables/useVaultSecrets';
@@ -183,22 +184,37 @@ async function handleAutofill() {
 
 async function handleToggleBookmark() {
   if (!secret.value) return;
+  const previousState = secret.value.is_bookmark ? 1 : 0;
+  const newState = previousState ? 0 : 1;
+
+  // Optimistic update
+  secret.value = { ...secret.value, is_bookmark: newState };
+  cachedSecrets.value = cachedSecrets.value.map((s) =>
+    s.name === secret.value!.name ? { ...s, is_bookmark: newState } : s
+  );
+
   try {
     const res = await toggleBookmark(secret.value.name);
-    secret.value.is_bookmark = res.is_bookmark;
-    const match = cachedSecrets.value.find((s) => s.name === secret.value!.name);
-    if (match) {
-      match.is_bookmark = res.is_bookmark;
-    }
+    const confirmedState =
+      res && res.is_bookmark !== undefined ? (res.is_bookmark ? 1 : 0) : newState;
+    secret.value = { ...secret.value, is_bookmark: confirmedState };
+    cachedSecrets.value = cachedSecrets.value.map((s) =>
+      s.name === secret.value!.name ? { ...s, is_bookmark: confirmedState } : s
+    );
     const cached = await getStoredSecretsCache();
     if (cached && Array.isArray(cached.secrets)) {
-      const storageMatch = cached.secrets.find((s) => s.name === secret.value!.name);
-      if (storageMatch) {
-        storageMatch.is_bookmark = res.is_bookmark;
-        await setStoredSecretsCache(cached);
-      }
+      const updatedSecrets = cached.secrets.map((s) =>
+        s.name === secret.value!.name ? { ...s, is_bookmark: confirmedState } : s
+      );
+      await setStoredSecretsCache({ ...cached, secrets: updatedSecrets });
     }
-  } catch {}
+  } catch (err) {
+    console.error('Failed to toggle bookmark in detail view:', err);
+    secret.value = { ...secret.value, is_bookmark: previousState };
+    cachedSecrets.value = cachedSecrets.value.map((s) =>
+      s.name === secret.value!.name ? { ...s, is_bookmark: previousState } : s
+    );
+  }
 }
 
 async function handleDelete() {
@@ -308,12 +324,19 @@ onUnmounted(() => {
         <Button
           size="sm"
           variant="ghost"
-          icon="lucide-star"
-          :label="secret?.is_bookmark ? 'Remove Bookmark' : 'Bookmark'"
-          :tooltip="secret?.is_bookmark ? 'Remove Bookmark' : 'Bookmark'"
-          :class="secret?.is_bookmark ? 'text-ink-amber-6' : 'text-ink-gray-4'"
-          @click="handleToggleBookmark"
-        />
+          :tooltip="secret?.is_bookmark ? 'Remove from bookmarks' : 'Add to bookmarks'"
+          @click.stop="handleToggleBookmark"
+        >
+          <template #icon>
+            <BookmarkIcon
+              :filled="Boolean(secret?.is_bookmark)"
+              class="size-4 transition-colors"
+              :class="
+                secret?.is_bookmark ? 'text-amber-500' : 'text-ink-gray-4 hover:text-amber-500'
+              "
+            />
+          </template>
+        </Button>
         <Button
           size="sm"
           variant="ghost"

@@ -178,4 +178,55 @@ describe('SecretsListView Component', () => {
     expect(wrapper.text()).toContain('GitHub Developer');
     expect(wrapper.text()).toContain('AWS Production Access Key');
   });
+
+  it('filters by bookmarks when bookmarks filter button is clicked and removes item when unbookmarked', async () => {
+    cachedSecrets.value = [
+      {
+        name: 'sec-github',
+        title: 'GitHub Developer',
+        username: 'octocat',
+        secret_type: 'Password',
+        url: 'https://github.com',
+        is_bookmark: 0,
+        modified: new Date().toISOString(),
+      },
+      {
+        name: 'sec-aws',
+        title: 'AWS Production Access Key',
+        username: 'aws_admin',
+        secret_type: 'API Key',
+        url: 'https://aws.amazon.com',
+        is_bookmark: 1,
+        modified: new Date().toISOString(),
+      },
+    ];
+    cachedTotal.value = 2;
+
+    const wrapper = mount(SecretsListView, {
+      global: {
+        stubs: {
+          VaultIcon: true,
+          SecretTypeIcon: true,
+        },
+      },
+    });
+
+    // Click bookmarks filter button
+    const bookmarkFilterBtn = wrapper.find('button[tooltip="Show Bookmarks"]');
+    expect(bookmarkFilterBtn.exists()).toBe(true);
+    await bookmarkFilterBtn.trigger('click');
+
+    // Only AWS secret should be shown
+    expect(wrapper.text()).toContain('AWS Production Access Key');
+    expect(wrapper.text()).not.toContain('GitHub Developer');
+
+    // Now unbookmark AWS secret
+    const removeBookmarkBtn = wrapper.find('button[tooltip="Remove from bookmarks"]');
+    expect(removeBookmarkBtn.exists()).toBe(true);
+    await removeBookmarkBtn.trigger('click');
+
+    // It should immediately be removed from the filtered list, showing empty state
+    expect(wrapper.text()).not.toContain('AWS Production Access Key');
+    expect(wrapper.text()).toContain('No bookmarks yet');
+  });
 });

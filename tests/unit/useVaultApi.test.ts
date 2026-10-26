@@ -138,5 +138,24 @@ describe('useVaultApi Composable', () => {
         'You do not have permission to view this secret'
       );
     });
+
+    it('toggleBookmark calls POST on toggle_bookmark endpoint with secret name', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ message: { name: 'sec-star', is_bookmark: 1 } }),
+      } as Response);
+
+      const { toggleBookmark } = useVaultApi();
+      const res = await toggleBookmark('sec-star');
+
+      expect(res.is_bookmark).toBe(1);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://vault.example.com/api/method/frappe_vault.api.secrets.toggle_bookmark',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ name: 'sec-star' }),
+        })
+      );
+    });
   });
 });
