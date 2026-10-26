@@ -3,7 +3,8 @@ import type { AuthInfo } from '../types/vault';
 import { getStoredAuthInfo, setStoredAuthInfo, clearStoredAuthInfo } from '../utils/storage';
 
 export const authState = ref<AuthInfo | null>(null);
-export const isAuthLoading = ref(true);
+export const isAuthInitializing = ref(true);
+export const isAuthLoading = ref(false);
 export const authError = ref<string | null>(null);
 
 function normalizeUrl(url: string): string {
@@ -16,7 +17,7 @@ function normalizeUrl(url: string): string {
 
 export function useVaultAuth() {
   async function initAuth() {
-    isAuthLoading.value = true;
+    isAuthInitializing.value = true;
     authError.value = null;
     try {
       const stored = await getStoredAuthInfo();
@@ -30,7 +31,7 @@ export function useVaultAuth() {
     } catch (err: any) {
       console.error('Failed to init auth:', err);
     } finally {
-      isAuthLoading.value = false;
+      isAuthInitializing.value = false;
     }
   }
 
@@ -221,6 +222,7 @@ export function useVaultAuth() {
 
   return {
     authState,
+    isAuthInitializing,
     isAuthLoading,
     authError,
     initAuth,

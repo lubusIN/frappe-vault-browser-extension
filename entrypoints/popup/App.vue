@@ -12,7 +12,7 @@ import VaultIcon from '../../components/VaultIcon.vue';
 
 type Screen = 'list' | 'detail' | 'settings' | 'new-secret' | 'about';
 
-const { authState, isAuthLoading, initAuth } = useVaultAuth();
+const { authState, isAuthInitializing, initAuth } = useVaultAuth();
 
 const currentScreen = ref<Screen>('list');
 const selectedSecretName = ref<string>('');
@@ -54,7 +54,7 @@ function handleSecretDeleted(_secretName: string) {
   >
     <!-- Initial App Loading State -->
     <div
-      v-if="isAuthLoading && !authState"
+      v-if="isAuthInitializing && !authState"
       class="flex-1 flex flex-col items-center justify-center p-6 text-ink-gray-5 text-xs gap-3"
     >
       <VaultIcon size="size-10" class="rounded-5 shadow-elevation-1 animate-pulse" />

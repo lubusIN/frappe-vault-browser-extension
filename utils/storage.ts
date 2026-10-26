@@ -3,7 +3,15 @@ import type { AuthInfo } from '../types/vault';
 const STORAGE_KEYS = {
   AUTH_INFO: 'frappe_vault_auth_info',
   SETTINGS: 'frappe_vault_settings',
+  CONNECT_DRAFT: 'frappe_vault_connect_draft',
 } as const;
+
+export interface ConnectDraft {
+  instanceUrl?: string;
+  authMode?: 'password' | 'token';
+  username?: string;
+  apiKey?: string;
+}
 
 export interface ExtensionSettings {
   autoFillCurrentTab: boolean;
@@ -69,5 +77,26 @@ export async function setStoredSettings(settings: Partial<ExtensionSettings>): P
     });
   } catch (err) {
     console.error('Failed to update settings in storage:', err);
+  }
+}
+
+export async function getStoredConnectDraft(): Promise<ConnectDraft | null> {
+  try {
+    const res = await browser.storage.local.get(STORAGE_KEYS.CONNECT_DRAFT);
+    const data = res[STORAGE_KEYS.CONNECT_DRAFT] as ConnectDraft | undefined;
+    return data || null;
+  } catch (err) {
+    console.error('Failed to get connect draft from storage:', err);
+    return null;
+  }
+}
+
+export async function setStoredConnectDraft(draft: ConnectDraft): Promise<void> {
+  try {
+    await browser.storage.local.set({
+      [STORAGE_KEYS.CONNECT_DRAFT]: draft,
+    });
+  } catch (err) {
+    console.error('Failed to save connect draft to storage:', err);
   }
 }

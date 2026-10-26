@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useVaultAuth } from '../composables/useVaultAuth';
 import VaultIcon from './VaultIcon.vue';
 import { Button, TextInput, Password, ErrorMessage, TabButtons, Icon } from 'frappe-ui';
+import { getStoredConnectDraft, setStoredConnectDraft } from '../utils/storage';
 
 const { loginWithPassword, loginWithToken, authError, isAuthLoading } = useVaultAuth();
 
@@ -22,8 +23,33 @@ const authModeOptions = [
   { label: 'API Token', value: 'token', iconLeft: 'lucide-key' },
 ];
 
+onMounted(async () => {
+  const draft = await getStoredConnectDraft();
+  if (draft) {
+    if (draft.instanceUrl && !instanceUrl.value) instanceUrl.value = draft.instanceUrl;
+    if (draft.authMode) authMode.value = draft.authMode;
+    if (draft.username && !username.value) username.value = draft.username;
+    if (draft.apiKey && !apiKey.value) apiKey.value = draft.apiKey;
+  }
+});
+
+function persistDraft() {
+  setStoredConnectDraft({
+    instanceUrl: instanceUrl.value,
+    authMode: authMode.value,
+    username: username.value,
+    apiKey: apiKey.value,
+  });
+}
+
+watch([instanceUrl, authMode, username, apiKey], () => {
+  persistDraft();
+});
+
 async function handleConnect() {
   if (!instanceUrl.value.trim()) return;
+
+  persistDraft();
 
   if (authMode.value === 'password') {
     if (!username.value || !password.value) return;

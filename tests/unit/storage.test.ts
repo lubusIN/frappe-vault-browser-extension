@@ -5,6 +5,8 @@ import {
   clearStoredAuthInfo,
   getStoredSettings,
   setStoredSettings,
+  getStoredConnectDraft,
+  setStoredConnectDraft,
 } from '../../utils/storage';
 import { mockStorageLocal } from '../setup';
 import type { AuthInfo } from '../../types/vault';
@@ -75,6 +77,27 @@ describe('Storage Utility', () => {
       expect(updated.theme).toBe('dark');
       expect(updated.autoFillCurrentTab).toBe(false);
       expect(updated.clearClipboardAfterSeconds).toBe(30); // preserved default
+    });
+  });
+
+  describe('Connect Draft Storage', () => {
+    it('returns null when no connect draft is stored', async () => {
+      const draft = await getStoredConnectDraft();
+      expect(draft).toBeNull();
+    });
+
+    it('stores and retrieves connection draft', async () => {
+      await setStoredConnectDraft({
+        instanceUrl: 'https://vault.example.com',
+        authMode: 'password',
+        username: 'admin@example.com',
+      });
+
+      const draft = await getStoredConnectDraft();
+      expect(draft).not.toBeNull();
+      expect(draft?.instanceUrl).toBe('https://vault.example.com');
+      expect(draft?.authMode).toBe('password');
+      expect(draft?.username).toBe('admin@example.com');
     });
   });
 });
