@@ -1,8 +1,9 @@
-# Frappe Vault - Browser Extension
 
 <p align="center"><img width="160" src=".github/assets/logo.svg"></p>
 
 <img src=".github/assets/banner.png" />
+
+# Frappe Vault - Browser Extension
 
 Browser extension for [Frappe Vault](https://github.com/lubusIN/frappe-vault). Search, autofill, and manage credentials directly from your browser.
 
