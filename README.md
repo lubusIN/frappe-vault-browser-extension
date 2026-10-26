@@ -1,21 +1,29 @@
 # Frappe Vault - Browser Extension
 
-Browser extension for [Frappe Vault](https://github.com/lubusIN/frappe-vault) built with [WXT](https://wxt.dev/), Vue 3, and [frappe-ui](https://github.com/frappe/frappe-ui). Connects to a self-hosted or cloud Frappe Vault instance to search, view, autofill, and manage credentials directly from the browser.
+<p align="center"><img width="160" src=".github/assets/logo.svg"></p>
+
+<img src=".github/assets/banner.png" />
+
+Browser extension for [Frappe Vault](https://github.com/lubusIN/frappe-vault). Search, autofill, and manage credentials directly from your browser.
+
+<a href="https://chromewebstore.google.com/detail/frappe-vault/ljnpblaghkeddioeknlgcoolmomofjlj">
+  <img src=".github/assets/chrome-badge.png" alt="Available in the Chrome Web Store" height="50" />
+</a>
 
 ## Features
 
-- **Instance Connection**: Authenticate using standard Frappe credentials (username/password session) or API tokens (`api_key` & `api_secret`).
-- **Domain Matching**: Detects the active tab's domain to surface relevant credentials instantly.
-- **Autofill & Quick Copy**: Fill login forms with one click or copy usernames, passwords, and tokens to clipboard.
-- **Secret Management**: Search, filter by secret type, toggle bookmarks, and create new secrets with prefilled site details.
-- **TOTP Authenticator**: Displays live 2FA codes with countdown timer.
-- **Password Generator**: Configurable, client-side cryptographic password generator.
+- **Domain Matching**: Detects the active tab and brings up matching credentials.
+- **Autofill & Copy**: Fill login forms directly or copy usernames, passwords, and tokens.
+- **Secret Management**: Search, filter by type, star favorites, and add new secrets.
+- **TOTP / 2FA**: Live two-factor authentication codes with countdown timers.
+- **Password Generator**: Generate strong passwords on the fly.
+- **Flexible Auth**: Sign in with Frappe user credentials or API tokens.
 
 ## Prerequisites
 
 - Node.js 20+
 - npm 10+
-- A running Frappe instance with the [frappe_vault](https://github.com/lubusIN/frappe-vault) app installed
+- A running Frappe instance with [frappe_vault](https://github.com/lubusIN/frappe-vault) installed
 
 ## Setup
 
@@ -26,6 +34,8 @@ npm install
 ```
 
 ## Development
+
+Built with [WXT](https://wxt.dev/), Vue 3, and [frappe-ui](https://github.com/frappe/frappe-ui).
 
 ```bash
 # Chrome (Manifest V3)
@@ -52,44 +62,85 @@ npm run compile
 
 ### Chrome / Chromium
 
-1. Go to `chrome://extensions`.
-2. Enable **Developer mode** (top right).
-3. Click **Load unpacked** and select the `.output/chrome-mv3` directory.
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked** and select `.output/chrome-mv3`.
 
 ### Firefox
 
-1. Go to `about:debugging#/runtime/this-firefox`.
+1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on...**.
 3. Select `manifest.json` inside `.output/firefox-mv2`.
 
 ## Authentication
 
-When opening the extension popup, enter your Frappe Vault URL (e.g., `https://vault.example.com` or `http://localhost:8000`).
+When opening the extension popup, enter your Frappe Vault URL (e.g., `https://vault.example.com` or `http://localhost:8000`):
 
-- **User Login**: Standard Frappe user account with `Vault User` or `Vault Admin` role.
-- **API Token**: Use an API Key and API Secret generated in Frappe under **User > API Access**.
+- **User Login**: Standard Frappe account with `Vault User` or `Vault Admin` role.
+- **API Token**: API Key and Secret generated under **User > API Access**.
 
-## Releases & CI
+## Releases
 
-The repository uses GitHub Actions for continuous testing and releases:
+Pre-built extension packages are available under [Releases](https://github.com/lubusIN/frappe-vault-browser-extension/releases):
 
-- **Rolling Dev Release**: Triggered on every merge or push to the `main` branch. It continuously builds the extension and updates the rolling pre-release under the [`dev`](https://github.com/lubusIN/frappe-vault-browser-extension/releases/tag/dev) tag with fixed asset URLs (`vault-browser-extension-dev-chrome.zip`, `vault-browser-extension-dev-firefox.zip`) and SHA256 checksums.
-- **Tagged Release**: Triggered when a semantic version tag (e.g. `v1.0.0`) is pushed. Builds the production extension packages, attaches versioned zip archives, generates automated release notes, and publishes the GitHub Release. If Chrome Web Store secrets are configured, it automatically submits the Chrome package for review.
-- **Pull Request CI**: Validates all incoming pull requests by running ESLint, TypeScript typecheck (`vue-tsc`), Vitest unit/component tests, and packaging builds. Injects downloadable QA build links directly into the PR description.
+- **Tagged Releases**: Versioned production packages for Chrome and Firefox.
+- **Dev Builds**: Bleeding-edge builds updated automatically on pushes to `main` under the [`dev` release tag](https://github.com/lubusIN/frappe-vault-browser-extension/releases/tag/dev).
 
-### Chrome Web Store Publishing Setup
+For release steps, CI workflows, and Chrome Web Store setup, see [RELEASING.md](RELEASING.md).
 
-To enable automated submissions to the Chrome Web Store on tagged releases:
+## Support
 
-1. **Initial Upload**: Upload extension `.output/*-chrome.zip` manually once in the [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole/) to establish the listing and obtain Extension ID.
-2. **API Credentials**: Generate Google API OAuth2 credentials in Google Cloud Console (`Client ID`, `Client Secret`, and `Refresh Token`). You can run `npx wxt submit init` locally for an interactive setup wizard.
-3. **GitHub Secrets**: Add the following repository secrets under **Settings > Secrets and variables > Actions**:
-   - `CHROME_EXTENSION_ID`
-   - `CHROME_CLIENT_ID`
-   - `CHROME_CLIENT_SECRET`
-   - `CHROME_REFRESH_TOKEN`
+Frappe Vault Browser Extension is a free and open-source project maintained by [LUBUS](https://lubus.in/).
 
-When these secrets are provided, pushing any version tag (e.g. `v1.0.0`) automatically uploads the new build to the Chrome Web Store.
+For bugs, feature requests, and community support, please use GitHub [Issues](https://github.com/lubusIN/frappe-vault-browser-extension/issues). Our team reviews and addresses issues based on availability and project priorities, so we cannot guarantee response or resolution timelines for community support.
+
+If your organization needs dedicated assistance, implementation help, customization, or priority support, get in touch with [LUBUS](https://lubus.in/contact-us).
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or Pull Request.
+
+## More Frappe Tools
+
+Explore more open-source tools we're building for the Frappe ecosystem.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/lubusIN/frappe-vault">
+        <img src="https://raw.githubusercontent.com/lubusIN/frappe-vault/main/.github/assets/logo.svg" alt="Frappe Vault" height="60">
+      </a>
+      <br>
+      Manage secrets and passwords with Frappe.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/lubusIN/frappe-local">
+        <img src="https://raw.githubusercontent.com/lubusIN/frappe-local/main/.github/assets/logo.svg" alt="Frappe Local" height="60">
+      </a>
+      <br>
+      Create and manage local Frappe benches and sites visually.
+    </td>
+  </tr>
+
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/lubusIN/frappe-playground">
+        <img src="https://raw.githubusercontent.com/lubusIN/frappe-playground/main/.github/logo.svg" alt="Frappe Playground" height="60">
+      </a>
+      <br>
+      Run Frappe entirely in your browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/lubusIN/wp-frappe-data-store">
+        <img src="https://raw.githubusercontent.com/lubusIN/wp-frappe-data-store/main/.github/assets/logo.svg" alt="WP Frappe Data Store" height="60">
+      </a>
+      <br>
+      Connect WordPress and Frappe with a React data store.
+    </td>
+  </tr>
+</table>
+
+[Explore all LUBUS projects →](https://github.com/lubusIN)
 
 ## Meet Your Artisans
 
@@ -101,4 +152,4 @@ When these secrets are provided, pushing any version tag (e.g. `v1.0.0`) automat
 
 ## License
 
-Frappe Vault - Browser Extention is open-sourced licensed under the [MIT License](LICENSE).
+Frappe Vault Browser Extension is open-source software licensed under the [MIT License](LICENSE).
