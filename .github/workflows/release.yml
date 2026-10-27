@@ -141,9 +141,22 @@ jobs:
       # -------------------------------------------------------------
       - name: Submit to Chrome Web Store
         if: startsWith(github.ref, 'refs/tags/v') && env.HAS_CHROME_SECRETS == 'true'
-        run: npx wxt submit --chrome-zip .output/*-chrome.zip
+        run: |
+          if [ -z "$CHROME_API_VERSION" ]; then
+            if [ -n "$CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL" ]; then
+              export CHROME_API_VERSION="v2"
+            elif [ -n "$CHROME_CLIENT_ID" ]; then
+              export CHROME_API_VERSION="v1.1"
+            fi
+          fi
+
+          for var in CHROME_API_VERSION CHROME_CLIENT_ID CHROME_CLIENT_SECRET CHROME_REFRESH_TOKEN CHROME_PUBLISHER_ID CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL CHROME_SERVICE_ACCOUNT_PRIVATE_KEY; do
+            [ -z "${!var}" ] && unset "$var"
+          done
+
+          npx wxt submit --chrome-zip .output/*-chrome.zip
         env:
-          CHROME_API_VERSION: ${{ secrets.CHROME_API_VERSION || (secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL != '' && 'v2' || '') }}
+          CHROME_API_VERSION: ${{ secrets.CHROME_API_VERSION }}
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
           CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
