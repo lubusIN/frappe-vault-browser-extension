@@ -3,7 +3,16 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useVaultAuth } from '../composables/useVaultAuth';
 import { openExternalUrl } from '../utils/helpers';
 import { getStoredSettings, setStoredSettings } from '../utils/storage';
-import { Button, Badge, Switch, Dialog, Icon, useColorScheme } from 'frappe-ui';
+import {
+  Button,
+  Badge,
+  Switch,
+  Dialog,
+  Icon,
+  TabButtons,
+  KeyboardShortcut,
+  useColorScheme,
+} from 'frappe-ui';
 
 const emit = defineEmits<{
   (e: 'back'): void;
@@ -16,6 +25,12 @@ const vaultWebUrl = computed(() => {
   if (!authState.value?.instanceUrl) return '#';
   return `${authState.value.instanceUrl}/vault`;
 });
+
+const themeOptions = [
+  { label: 'System', value: 'system', icon: 'lucide-laptop' },
+  { label: 'Light', value: 'light', icon: 'lucide-sun' },
+  { label: 'Dark', value: 'dark', icon: 'lucide-moon' },
+];
 
 // Security & Autofill settings
 const settings = reactive({
@@ -185,50 +200,15 @@ async function handleConfirmLogout() {
           </span>
         </div>
 
-        <div
-          class="grid grid-cols-3 gap-1 bg-surface-gray-2 p-1 rounded-4 border border-outline-gray-1"
-        >
-          <button
-            type="button"
-            class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
-            :class="
-              colorScheme === 'system'
-                ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
-                : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'
-            "
-            @click="handleSetTheme('system')"
-          >
-            <Icon icon="lucide-laptop" class="size-3.5" />
-            <span>System</span>
-          </button>
-
-          <button
-            type="button"
-            class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
-            :class="
-              colorScheme === 'light'
-                ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
-                : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'
-            "
-            @click="handleSetTheme('light')"
-          >
-            <Icon icon="lucide-sun" class="size-3.5" />
-            <span>Light</span>
-          </button>
-
-          <button
-            type="button"
-            class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-3 text-xs font-medium transition cursor-pointer"
-            :class="
-              colorScheme === 'dark'
-                ? 'bg-surface-base text-ink-gray-9 shadow-2xs font-semibold'
-                : 'text-ink-gray-6 hover:text-ink-gray-9 hover:bg-surface-gray-3/50'
-            "
-            @click="handleSetTheme('dark')"
-          >
-            <Icon icon="lucide-moon" class="size-3.5" />
-            <span>Dark</span>
-          </button>
+        <div class="pt-1">
+          <TabButtons
+            :model-value="colorScheme"
+            :options="themeOptions"
+            variant="subtle"
+            size="sm"
+            fluid
+            @update:model-value="(val) => handleSetTheme(val as 'system' | 'light' | 'dark')"
+          />
         </div>
       </div>
 
@@ -269,6 +249,48 @@ async function handleConfirmLogout() {
             description="Show vault credential dropdown directly on website login inputs"
           />
         </div>
+      </div>
+
+      <!-- Keyboard Shortcuts Card using Frappe UI KeyboardShortcut -->
+      <div
+        class="bg-surface-base p-3.5 rounded-6 border border-outline-gray-2 shadow-elevation-1 space-y-2.5"
+      >
+        <div class="flex items-center gap-1.5">
+          <Icon icon="lucide-keyboard" class="size-3.5 text-ink-gray-5" />
+          <span class="text-[10px] font-bold uppercase tracking-wider text-ink-gray-5"
+            >Keyboard Shortcuts</span
+          >
+        </div>
+
+        <div class="space-y-2.5 pt-1 text-[11px]">
+          <div class="flex items-center justify-between">
+            <span class="text-ink-gray-7">Open Frappe Vault</span>
+            <KeyboardShortcut combo="Mod+Shift+Y" bg />
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-ink-gray-7">Auto-fill page</span>
+            <KeyboardShortcut combo="Mod+Shift+L" bg />
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-ink-gray-7">Focus search</span>
+            <div class="flex items-center gap-1.5">
+              <KeyboardShortcut combo="Mod+K" bg />
+              <span class="text-ink-gray-4 text-[10px]">or</span>
+              <KeyboardShortcut combo="/" bg />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-ink-gray-7">Go back / Dismiss</span>
+            <KeyboardShortcut combo="Escape" bg />
+          </div>
+        </div>
+
+        <p class="text-[10px] text-ink-gray-4 pt-1 border-t border-outline-gray-1">
+          Customize global hotkeys in your browser extension shortcuts settings.
+        </p>
       </div>
     </div>
 

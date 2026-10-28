@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useVaultApi } from '../composables/useVaultApi';
 import { useVaultAuth } from '../composables/useVaultAuth';
 import { useActiveTab } from '../composables/useActiveTab';
@@ -10,7 +10,7 @@ import BookmarkIcon from './BookmarkIcon.vue';
 import { matchesDomain, copyText, openExternalUrl } from '../utils/helpers';
 import { getStoredSecretsCache, setStoredSecretsCache } from '../utils/storage';
 import { cachedSecrets, cachedTotal } from '../composables/useVaultSecrets';
-import { Button, TextInput, Badge, Spinner, Dropdown, Icon } from 'frappe-ui';
+import { Button, TextInput, Badge, Spinner, Dropdown, Icon, KeyboardShortcut } from 'frappe-ui';
 import type { DropdownOptions } from 'frappe-ui';
 
 const emit = defineEmits<{
@@ -40,6 +40,8 @@ let searchDebounceTimer: any = null;
 
 const copiedSecretName = ref<string | null>(null);
 const autofilledSecretName = ref<string | null>(null);
+const searchInputRef = ref<any>(null);
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 
 const hasMore = computed(() => {
   return secrets.value.length < totalSecrets.value;
@@ -386,7 +388,58 @@ function handleAddForCurrentTab() {
   emit('new-secret', activeTab.value?.url, activeTab.value?.title || activeTab.value?.domain);
 }
 
+function focusSearchInput() {
+  if (!searchInputRef.value) return;
+  if (typeof searchInputRef.value.focus === 'function') {
+    searchInputRef.value.focus();
+  } else if (searchInputRef.value.inputElement) {
+    searchInputRef.value.inputElement.focus();
+  } else if (searchInputRef.value instanceof HTMLElement) {
+    searchInputRef.value.focus();
+  } else if (searchInputRef.value.$el instanceof HTMLElement) {
+    if (searchInputRef.value.$el.tagName === 'INPUT') {
+      searchInputRef.value.$el.focus();
+    } else {
+      searchInputRef.value.$el.querySelector('input')?.focus();
+    }
+  }
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  const target = e.target as HTMLElement | null;
+  const isInputActive =
+    target &&
+    (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+  // Focus search with Cmd+K / Ctrl+K
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    focusSearchInput();
+    return;
+  }
+
+  // Focus search with "/" when not in an input
+  if (e.key === '/' && !isInputActive) {
+    e.preventDefault();
+    focusSearchInput();
+    return;
+  }
+
+  // Clear search on Escape when focused in search or when searchQuery has text
+  if (e.key === 'Escape') {
+    if (searchQuery.value) {
+      e.preventDefault();
+      searchQuery.value = '';
+    } else if (isInputActive) {
+      (target as HTMLElement).blur();
+    }
+    return;
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('keydown', handleKeydown);
+
   // If we already have preloaded secrets in memory, silent background revalidate
   if (secrets.value.length > 0) {
     fetchVaultSecrets(false);
@@ -410,6 +463,10 @@ onMounted(async () => {
     console.warn('Failed to read secrets cache:', err);
   }
   fetchVaultSecrets(true);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
@@ -467,9 +524,10 @@ onMounted(async () => {
       <!-- Search Input using Frappe UI TextInput -->
       <div class="flex-1 min-w-0">
         <TextInput
+          ref="searchInputRef"
           v-model="searchQuery"
           type="text"
-          placeholder="Search secrets..."
+          :placeholder="`Search secrets... (${isMac ? '⌘K' : 'Ctrl+K'})`"
           size="sm"
           variant="subtle"
         >
@@ -487,6 +545,7 @@ onMounted(async () => {
               tooltip="Clear search"
               @click="searchQuery = ''"
             />
+            <KeyboardShortcut v-else combo="Mod+K" bg class="pointer-events-none" />
           </template>
         </TextInput>
       </div>

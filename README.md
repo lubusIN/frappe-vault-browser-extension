@@ -17,6 +17,7 @@ Browser extension for [Frappe Vault](https://github.com/lubusIN/frappe-vault). S
 - **Secret Management**: Search, filter by type, star favorites, and add new secrets.
 - **TOTP / 2FA**: Live two-factor authentication codes with countdown timers.
 - **Password Generator**: Generate strong passwords on the fly.
+- **Keyboard Shortcuts**: Global hotkeys for quick access (`Cmd+Shift+Y` to open, `Cmd+Shift+L` to auto-fill current page, `Cmd+K` to search).
 - **Flexible Auth**: Sign in with Frappe user credentials or API tokens.
 
 ## Prerequisites

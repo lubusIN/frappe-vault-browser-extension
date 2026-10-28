@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import SecretsListView from '../../components/SecretsListView.vue';
 import { authState } from '../../composables/useVaultAuth';
@@ -39,7 +39,25 @@ vi.mock('../../composables/useVaultApi', () => ({
 }));
 
 describe('SecretsListView Component', () => {
+  let activeWrappers: any[] = [];
+
+  function createWrapper(options: any = {}) {
+    const w = mount(SecretsListView, {
+      global: {
+        stubs: {
+          VaultIcon: true,
+          SecretTypeIcon: true,
+        },
+      },
+      ...options,
+    });
+    activeWrappers.push(w);
+    return w;
+  }
+
   beforeEach(async () => {
+    activeWrappers.forEach((w) => w.unmount());
+    activeWrappers = [];
     await mockStorageLocal.clear();
     cachedSecrets.value = [];
     cachedTotal.value = 0;
@@ -53,15 +71,14 @@ describe('SecretsListView Component', () => {
     };
   });
 
+  afterEach(() => {
+    activeWrappers.forEach((w) => w.unmount());
+    activeWrappers = [];
+    vi.restoreAllMocks();
+  });
+
   it('renders search input and header action buttons', () => {
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     expect(wrapper.html()).toContain('placeholder="Search secrets');
     expect(wrapper.text()).toContain('Password Generator');
@@ -69,14 +86,7 @@ describe('SecretsListView Component', () => {
   });
 
   it('emits open-settings when settings button is clicked', async () => {
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     const settingsBtn = wrapper.find('button[tooltip="Settings"]');
     if (settingsBtn.exists()) {
@@ -86,14 +96,7 @@ describe('SecretsListView Component', () => {
   });
 
   it('emits open-generator when generator button is clicked', async () => {
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     const genBtn = wrapper.find('button[tooltip="Password Generator"]');
     if (genBtn.exists()) {
@@ -103,14 +106,7 @@ describe('SecretsListView Component', () => {
   });
 
   it('emits new-secret when New Secret button is clicked', async () => {
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     const newBtn = wrapper.find('button[tooltip="New Secret (N)"]');
     if (newBtn.exists()) {
@@ -128,14 +124,7 @@ describe('SecretsListView Component', () => {
       },
     });
 
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     await new Promise((r) => setTimeout(r, 10));
 
@@ -147,14 +136,7 @@ describe('SecretsListView Component', () => {
   it('renders secrets after fetching when cache is initially empty', async () => {
     await mockStorageLocal.clear();
 
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     await new Promise((r) => setTimeout(r, 20));
     expect(wrapper.text()).toContain('GitHub Developer');
@@ -164,14 +146,7 @@ describe('SecretsListView Component', () => {
     cachedSecrets.value = mockSecretsList;
     cachedTotal.value = 2;
 
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     // Synchronously rendered without any timers or promises
     expect(wrapper.text()).not.toContain('Loading vault...');
@@ -202,14 +177,7 @@ describe('SecretsListView Component', () => {
     ];
     cachedTotal.value = 2;
 
-    const wrapper = mount(SecretsListView, {
-      global: {
-        stubs: {
-          VaultIcon: true,
-          SecretTypeIcon: true,
-        },
-      },
-    });
+    const wrapper = createWrapper();
 
     // Click bookmarks filter button
     const bookmarkFilterBtn = wrapper.find('button[tooltip="Show Bookmarks"]');
@@ -228,5 +196,29 @@ describe('SecretsListView Component', () => {
     // It should immediately be removed from the filtered list, showing empty state
     expect(wrapper.text()).not.toContain('AWS Production Access Key');
     expect(wrapper.text()).toContain('No bookmarks yet');
+  });
+
+  it('handles keyboard shortcuts for search focus and escape', async () => {
+    const wrapper = createWrapper();
+
+    const searchInput = wrapper.find('input[type="text"]');
+    expect(searchInput.exists()).toBe(true);
+    const focusSpy = vi.spyOn(HTMLInputElement.prototype, 'focus');
+
+    // Trigger Cmd+K
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+    expect(focusSpy).toHaveBeenCalled();
+
+    // Trigger "/"
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }));
+    expect(focusSpy).toHaveBeenCalledTimes(2);
+
+    // Set search query and trigger Escape
+    await searchInput.setValue('test search');
+    expect((searchInput.element as HTMLInputElement).value).toBe('test search');
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await wrapper.vm.$nextTick();
+    expect((searchInput.element as HTMLInputElement).value).toBe('');
   });
 });

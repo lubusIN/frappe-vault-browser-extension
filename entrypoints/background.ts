@@ -9,9 +9,26 @@ interface SecretsCache {
 
 let secretsCache: SecretsCache | null = null;
 const CACHE_TTL_MS = 30000; // 30 seconds cache for instant in-page dropdowns
+const tabAutofillIndices = new Map<number, number>();
+
+export function clearSecretsCache() {
+  secretsCache = null;
+  tabAutofillIndices.clear();
+}
 
 export default defineBackground(() => {
   console.log('[Frappe Vault] Background service worker initialized');
+
+  // Handle global shortcut commands (e.g. Cmd+Shift+L / Ctrl+Shift+L for autofill)
+  browser.commands?.onCommand?.addListener(async (command) => {
+    if (command === 'autofill_active_tab') {
+      await handleAutofillActiveTab();
+    }
+  });
+
+  browser.tabs?.onRemoved?.addListener((tabId) => {
+    tabAutofillIndices.delete(tabId);
+  });
 
   // Handle messages from popup or content script
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -107,12 +124,17 @@ export default defineBackground(() => {
     return (resJson.message !== undefined ? resJson.message : resJson) as T;
   }
 
-  async function handleGetMatchingSecrets(domain?: string): Promise<VaultSecretSummary[]> {
+  async function handleGetMatchingSecrets(
+    domain?: string,
+    bypassAutofillSetting = false
+  ): Promise<VaultSecretSummary[]> {
     if (!domain) return [];
 
-    const settings = await getStoredSettings();
-    if (!settings.autoFillCurrentTab) {
-      return [];
+    if (!bypassAutofillSetting) {
+      const settings = await getStoredSettings();
+      if (!settings.autoFillCurrentTab) {
+        return [];
+      }
     }
 
     const auth = await getStoredAuthInfo();
@@ -241,5 +263,80 @@ export default defineBackground(() => {
       username,
       password,
     };
+  }
+
+  async function handleAutofillActiveTab() {
+    try {
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      if (!tab || !tab.id || !tab.url) return;
+
+      // Ignore browser internal schemes
+      if (
+        tab.url.startsWith('chrome://') ||
+        tab.url.startsWith('chrome-extension://') ||
+        tab.url.startsWith('edge://') ||
+        tab.url.startsWith('about:') ||
+        tab.url.startsWith('moz-extension://')
+      ) {
+        return;
+      }
+
+      let domain = '';
+      try {
+        domain = new URL(tab.url).hostname;
+      } catch {
+        return;
+      }
+
+      // Find matching secrets (bypassing in-field popup setting since user explicitly triggered hotkey)
+      const matching = await handleGetMatchingSecrets(domain, true);
+      if (!matching || matching.length === 0) {
+        showBadgeFeedback(tab.id, '0', '#ef4444');
+        return;
+      }
+
+      // Cycle through multiple accounts on consecutive presses
+      const currentIndex = tabAutofillIndices.get(tab.id) ?? 0;
+      const secretToFill = matching[currentIndex % matching.length];
+      tabAutofillIndices.set(tab.id, (currentIndex + 1) % matching.length);
+
+      const decrypted = await handleDecryptSecret(secretToFill.name, tab.url);
+      if (!decrypted.success) {
+        showBadgeFeedback(tab.id, '!', '#ef4444');
+        return;
+      }
+
+      try {
+        await browser.tabs.sendMessage(tab.id, {
+          type: 'AUTOFILL_CREDENTIALS',
+          payload: {
+            username: decrypted.username,
+            password: decrypted.password,
+          },
+        });
+
+        const badgeText =
+          matching.length > 1 ? `${(currentIndex % matching.length) + 1}/${matching.length}` : '✓';
+        showBadgeFeedback(tab.id, badgeText, '#16a34a');
+      } catch (err) {
+        console.warn('[Frappe Vault] Content script unreachable on active tab:', err);
+      }
+    } catch (err) {
+      console.error('[Frappe Vault] Global autofill failed:', err);
+    }
+  }
+
+  function showBadgeFeedback(tabId: number, text: string, color: string) {
+    const actionApi = (browser as any).action || (browser as any).browserAction;
+    if (!actionApi?.setBadgeText) return;
+
+    try {
+      actionApi.setBadgeText({ text, tabId });
+      actionApi.setBadgeBackgroundColor?.({ color, tabId });
+      setTimeout(() => {
+        actionApi.setBadgeText({ text: '', tabId });
+      }, 1500);
+    } catch {}
   }
 });

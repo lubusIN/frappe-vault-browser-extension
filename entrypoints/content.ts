@@ -16,11 +16,15 @@ export default defineContentScript({
     let inFieldIcon: HTMLButtonElement | null = null;
     let currentTheme: 'system' | 'light' | 'dark' = 'system';
 
-    // Listen for manual autofill messages from popup
+    // Listen for manual autofill messages from popup or global shortcut
     browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'AUTOFILL_CREDENTIALS') {
         const { username, password } = message.payload || {};
-        const success = performAutofill(username, password, activeInput);
+        const activeEl = document.activeElement;
+        const target =
+          activeInput ||
+          (activeEl instanceof HTMLElement && isEligibleInput(activeEl) ? activeEl : null);
+        const success = performAutofill(username, password, target);
         sendResponse({ success });
         return true;
       }

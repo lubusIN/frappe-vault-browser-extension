@@ -46,6 +46,22 @@ export const mockTabs = {
   query: vi.fn().mockResolvedValue([]),
   sendMessage: vi.fn(),
   create: vi.fn(),
+  onRemoved: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+};
+
+export const mockCommands = {
+  onCommand: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+};
+
+export const mockAction = {
+  setBadgeText: vi.fn(),
+  setBadgeBackgroundColor: vi.fn(),
 };
 
 // Polyfill browser & chrome globally in test environment
@@ -56,10 +72,18 @@ globalThis.browser = {
   },
   runtime: mockRuntime,
   tabs: mockTabs,
+  commands: mockCommands,
+  action: mockAction,
+  browserAction: mockAction,
 };
 
 // @ts-expect-error Mocking global WebExtension API
 globalThis.chrome = globalThis.browser;
+
+// @ts-expect-error Mocking WXT globals for testing
+globalThis.defineBackground = (fn: any) => fn;
+// @ts-expect-error Mocking WXT globals for testing
+globalThis.defineContentScript = (obj: any) => obj;
 
 // Mock frappe-ui components and composables for Vitest Node / happy-dom environment
 vi.mock('frappe-ui', () => ({
@@ -118,9 +142,14 @@ vi.mock('frappe-ui', () => ({
   },
   TabButtons: {
     name: 'TabButtons',
-    props: ['buttons', 'modelValue'],
+    props: ['buttons', 'options', 'modelValue'],
     template:
-      '<div><button v-for="b in buttons" :key="b.value" @click="$emit(\'update:modelValue\', b.value)">{{ b.label }}</button></div>',
+      '<div><button v-for="b in (options || buttons || [])" :key="b.value" @click="$emit(\'update:modelValue\', b.value)">{{ b.label }}</button></div>',
+  },
+  KeyboardShortcut: {
+    name: 'KeyboardShortcut',
+    props: ['combo', 'bg', 'showPlus', 'altCombos', 'useIcons'],
+    template: '<kbd :data-combo="combo" class="keyboard-shortcut"><slot>{{ combo }}</slot></kbd>',
   },
   Spinner: {
     name: 'Spinner',
