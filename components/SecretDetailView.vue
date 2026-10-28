@@ -402,160 +402,22 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Contextual Quick Action Buttons Bar (Frappe UI defaults) -->
-      <div class="flex gap-2">
-        <!-- Password Type Quick Actions -->
-        <template v-if="secret.secret_type === 'Password'">
-          <Button
-            size="sm"
-            variant="solid"
-            class="flex-1 justify-center"
-            :icon-left="autofillStatus === 'success' ? 'lucide-check' : 'lucide-zap'"
-            :label="
-              autofillStatus === 'success'
-                ? 'Filled!'
-                : autofillStatus === 'failed'
-                  ? 'Not found'
-                  : 'Autofill'
-            "
-            @click="handleAutofill"
-          />
-
-          <Button
-            v-if="secret.username || secret.email"
-            size="sm"
-            variant="subtle"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'username' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'username' ? 'Copied!' : 'Copy User'"
-            @click="handleCopy('username', secret.username || secret.email)"
-          />
-
-          <Button
-            v-if="secret.secret_type === 'Password' || secret.has_password"
-            size="sm"
-            variant="subtle"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'password' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'password' ? 'Copied!' : 'Copy Pass'"
-            @click="handleCopy('password')"
-          />
-        </template>
-
-        <!-- API Key Quick Actions -->
-        <template v-else-if="secret.secret_type === 'API Key'">
-          <Button
-            v-if="secret.api_key"
-            size="sm"
-            variant="subtle"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'api_key' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'api_key' ? 'Copied!' : 'Copy Key'"
-            @click="handleCopy('api_key', secret.api_key)"
-          />
-
-          <Button
-            v-if="
-              secret.secret_type === 'API Key' ||
-              secret.has_api_secret ||
-              secret.decrypted?.api_secret
-            "
-            size="sm"
-            variant="solid"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'api_secret' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'api_secret' ? 'Copied!' : 'Copy Secret'"
-            @click="handleCopy('api_secret')"
-          />
-        </template>
-
-        <!-- Credit Card Quick Actions -->
-        <template v-else-if="secret.secret_type === 'Credit Card'">
-          <Button
-            v-if="
-              secret.secret_type === 'Credit Card' ||
-              secret.has_card_number ||
-              secret.decrypted?.card_number
-            "
-            size="sm"
-            variant="solid"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'card_number' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'card_number' ? 'Copied!' : 'Copy Number'"
-            @click="handleCopy('card_number')"
-          />
-
-          <Button
-            v-if="
-              secret.secret_type === 'Credit Card' ||
-              secret.has_card_cvv ||
-              secret.decrypted?.card_cvv
-            "
-            size="sm"
-            variant="subtle"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'card_cvv' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'card_cvv' ? 'Copied!' : 'Copy CVV'"
-            @click="handleCopy('card_cvv')"
-          />
-        </template>
-
-        <!-- Database Quick Actions -->
-        <template v-else-if="secret.secret_type === 'Database'">
-          <Button
-            v-if="secret.db_host"
-            size="sm"
-            variant="subtle"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'db_host' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'db_host' ? 'Copied!' : 'Copy Host'"
-            @click="
-              handleCopy(
-                'db_host',
-                `${secret.db_host}${secret.db_port ? ':' + secret.db_port : ''}`
-              )
-            "
-          />
-
-          <Button
-            v-if="
-              secret.secret_type === 'Database' ||
-              secret.has_db_password ||
-              secret.decrypted?.db_password
-            "
-            size="sm"
-            variant="solid"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'db_password' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'db_password' ? 'Copied!' : 'Copy Pass'"
-            @click="handleCopy('db_password')"
-          />
-        </template>
-
-        <!-- SSH Key Quick Actions -->
-        <template v-else-if="secret.secret_type === 'SSH Key'">
-          <Button
-            size="sm"
-            variant="solid"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'ssh_private_key' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'ssh_private_key' ? 'Copied!' : 'Copy Key'"
-            @click="handleCopy('ssh_private_key')"
-          />
-        </template>
-
-        <!-- Note Quick Actions -->
-        <template v-else-if="secret.secret_type === 'Note'">
-          <Button
-            v-if="secret.notes"
-            size="sm"
-            variant="subtle"
-            class="flex-1 justify-center"
-            :icon-left="copiedField === 'notes' ? 'lucide-check' : 'lucide-copy'"
-            :label="copiedField === 'notes' ? 'Copied!' : 'Copy Note'"
-            @click="handleCopy('notes', secret.notes)"
-          />
-        </template>
+      <!-- Primary Autofill CTA (Only for Password credentials) -->
+      <div v-if="secret.secret_type === 'Password' || secret.has_password" class="pt-0.5">
+        <Button
+          size="sm"
+          variant="solid"
+          class="w-full justify-center"
+          :icon-left="autofillStatus === 'success' ? 'lucide-check' : 'lucide-zap'"
+          :label="
+            autofillStatus === 'success'
+              ? 'Filled on Page!'
+              : autofillStatus === 'failed'
+                ? 'No matching fields found on tab'
+                : 'Autofill on Active Tab'
+          "
+          @click="handleAutofill"
+        />
       </div>
 
       <!-- Live TOTP (2FA) Authenticator Card -->
@@ -854,30 +716,11 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Metadata footer -->
-      <div class="text-[10px] text-ink-gray-4 px-1 flex items-center justify-between">
-        <span>ID: {{ secret.name }}</span>
+      <!-- Metadata row -->
+      <div class="text-[10px] text-ink-gray-4 px-1 pt-1 pb-2 flex items-center justify-between">
+        <span class="font-mono">ID: {{ secret.name }}</span>
         <span>Updated {{ formatRelativeTime(secret.modified) }}</span>
       </div>
-    </div>
-
-    <!-- Pinned Footer: Edit in Full Tab -->
-    <div
-      v-if="secret"
-      class="px-3.5 py-2.5 bg-surface-base border-t border-outline-gray-2 flex items-center justify-between text-xs flex-shrink-0"
-    >
-      <div class="flex items-center gap-1.5 text-[11px] text-ink-gray-5">
-        <span>Updated {{ formatRelativeTime(secret?.modified) }}</span>
-      </div>
-      <Button
-        size="xs"
-        variant="solid"
-        icon-left="lucide-pencil"
-        icon-right="lucide-external-link"
-        label="Edit in Vault"
-        tooltip="Open in Frappe Vault web app for full editing"
-        @click="handleOpenVaultUrl"
-      />
     </div>
 
     <!-- Delete Confirmation using Frappe UI Dialog component -->

@@ -94,6 +94,7 @@ function handleSecretDeleted(_secretName: string) {
           v-else-if="currentScreen === 'settings'"
           key="settings"
           @back="currentScreen = 'list'"
+          @open-about="currentScreen = 'about'"
         />
 
         <!-- New Secret View -->

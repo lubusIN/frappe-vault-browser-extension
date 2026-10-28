@@ -425,6 +425,13 @@ function handleKeydown(e: KeyboardEvent) {
     return;
   }
 
+  // Create new secret with "N" when not in an input
+  if ((e.key === 'n' || e.key === 'N') && !isInputActive && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    emit('new-secret');
+    return;
+  }
+
   // Clear search on Escape when focused in search or when searchQuery has text
   if (e.key === 'Escape') {
     if (searchQuery.value) {
@@ -474,14 +481,14 @@ onUnmounted(() => {
   <div class="flex flex-col h-full bg-surface-gray-2 text-ink-gray-9">
     <!-- Top Action Header (Espresso Appbar) -->
     <div
-      class="px-3.5 py-2 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0"
+      class="px-3.5 py-2.5 bg-surface-base border-b border-outline-gray-2 flex items-center justify-between flex-shrink-0"
     >
-      <div class="flex items-center gap-2">
-        <VaultIcon size="size-5" class="rounded-md shadow-2xs" />
-        <span class="text-xs font-bold tracking-tight text-ink-gray-9">Frappe Vault</span>
+      <div class="flex items-center gap-2 min-w-0">
+        <VaultIcon size="size-5" class="rounded-md shadow-2xs flex-shrink-0" />
+        <span class="text-xs font-bold tracking-tight text-ink-gray-9 truncate">Frappe Vault</span>
       </div>
 
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1.5 flex-shrink-0">
         <Button
           size="sm"
           variant="ghost"
@@ -492,10 +499,10 @@ onUnmounted(() => {
         />
         <Button
           size="sm"
-          variant="ghost"
-          icon="lucide-plus"
-          label="Add New Secret"
-          tooltip="Add New Secret"
+          variant="solid"
+          icon-left="lucide-plus"
+          label="New"
+          tooltip="New Secret (N)"
           @click="emit('new-secret')"
         />
         <Button
@@ -505,14 +512,6 @@ onUnmounted(() => {
           label="Settings"
           tooltip="Settings"
           @click="emit('open-settings')"
-        />
-        <Button
-          size="sm"
-          variant="ghost"
-          icon="lucide-info"
-          label="About"
-          tooltip="About"
-          @click="emit('open-about')"
         />
       </div>
     </div>
@@ -606,7 +605,12 @@ onUnmounted(() => {
             <Icon icon="lucide-globe" class="size-3.5 text-ink-gray-7 flex-shrink-0" />
             <span class="truncate">{{ activeTab.domain }}</span>
           </div>
-          <Badge size="sm" variant="subtle" :label="`${matchingSecrets.length} found`" />
+          <Badge
+            size="sm"
+            variant="subtle"
+            :theme="matchingSecrets.length > 0 ? 'blue' : 'gray'"
+            :label="`${matchingSecrets.length} found`"
+          />
         </div>
 
         <!-- Matching items list -->

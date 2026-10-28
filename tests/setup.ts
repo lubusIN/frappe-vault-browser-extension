@@ -98,6 +98,11 @@ vi.mock('frappe-ui', () => ({
     props: ['label', 'theme', 'size', 'variant'],
     template: '<span><slot />{{ label }}</span>',
   },
+  Avatar: {
+    name: 'Avatar',
+    props: ['label', 'image', 'size', 'shape', 'theme'],
+    template: '<div class="avatar">{{ label }}</div>',
+  },
   Icon: {
     name: 'Icon',
     props: ['icon'],

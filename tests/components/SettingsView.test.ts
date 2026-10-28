@@ -86,4 +86,66 @@ describe('SettingsView Component', () => {
       );
     }
   });
+
+  it('renders segmented navigation tabs for General, Connection, Shortcuts, and About', () => {
+    const wrapper = mount(SettingsView, {
+      global: {
+        stubs: ['Button', 'Badge', 'Icon', 'Switch', 'Dialog'],
+      },
+    });
+
+    expect(wrapper.text()).toContain('General');
+    expect(wrapper.text()).toContain('Connection');
+    expect(wrapper.text()).toContain('Shortcuts');
+    expect(wrapper.text()).toContain('About');
+  });
+
+  it('renders about tab content with repository links and license', () => {
+    const wrapper = mount(SettingsView, {
+      props: {
+        initialTab: 'about',
+      },
+      global: {
+        stubs: ['Button', 'Badge', 'Icon', 'Switch', 'Dialog'],
+      },
+    });
+
+    expect(wrapper.text()).toContain('Frappe Vault');
+    expect(wrapper.text()).toContain('Browser Extension');
+    expect(wrapper.text()).toContain('Web App');
+    expect(wrapper.text()).toContain('MIT');
+  });
+
+  it('renders keyboard shortcuts directory and key combos', () => {
+    const wrapper = mount(SettingsView, {
+      props: {
+        initialTab: 'shortcuts',
+      },
+      global: {
+        stubs: ['Button', 'Badge', 'Icon', 'Switch', 'Dialog'],
+      },
+    });
+
+    expect(wrapper.text()).toContain('Keyboard Shortcuts');
+    expect(wrapper.text()).toContain('Open Frappe Vault');
+    expect(wrapper.text()).toContain('Auto-fill page');
+    expect(wrapper.text()).toContain('Focus search');
+    expect(wrapper.text()).toContain('New secret');
+  });
+
+  it('renders copy button for account email and single-row actions', () => {
+    const wrapper = mount(SettingsView, {
+      props: {
+        initialTab: 'connection',
+      },
+      global: {
+        stubs: ['Badge', 'Icon', 'Switch', 'Dialog'],
+      },
+    });
+
+    const copyAccountBtn = wrapper.find('button[tooltip="Copy User Account"]');
+    expect(copyAccountBtn.exists()).toBe(true);
+    expect(wrapper.text()).toContain('Open Vault');
+    expect(wrapper.text()).toContain('Signout');
+  });
 });
