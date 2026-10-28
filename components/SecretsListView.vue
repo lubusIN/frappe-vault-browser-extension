@@ -18,7 +18,6 @@ const emit = defineEmits<{
   (e: 'new-secret', initialUrl?: string, initialTitle?: string): void;
   (e: 'open-generator'): void;
   (e: 'open-settings'): void;
-  (e: 'open-about'): void;
 }>();
 
 const { getSecrets, decryptSecret, toggleBookmark } = useVaultApi();

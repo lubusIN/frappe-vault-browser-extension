@@ -19,7 +19,6 @@ import {
 
 const emit = defineEmits<{
   (e: 'back'): void;
-  (e: 'open-about'): void;
 }>();
 
 type SettingsTab = 'general' | 'connection' | 'shortcuts' | 'about';
@@ -74,7 +73,7 @@ const extensionVersion = computed(() => {
   return (
     g.browser?.runtime?.getManifest?.()?.version ||
     g.chrome?.runtime?.getManifest?.()?.version ||
-    '1.0.0'
+    '1.1.0'
   );
 });
 

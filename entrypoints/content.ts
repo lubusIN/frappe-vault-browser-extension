@@ -17,7 +17,7 @@ export default defineContentScript({
     let currentTheme: 'system' | 'light' | 'dark' = 'system';
 
     // Listen for manual autofill messages from popup or global shortcut
-    browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message.type === 'AUTOFILL_CREDENTIALS') {
         const { username, password } = message.payload || {};
         const activeEl = document.activeElement;
